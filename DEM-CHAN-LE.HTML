@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Even/Odd Count Simulator — Đếm số chẵn / số lẻ</title>
+  <meta name="description" content="Mô phỏng đếm số lượng số chẵn và số lượng số lẻ trong mảng. Step / Auto / Quiz / Export. Giao diện sáng, offline."/>
+  <style>
+    :root {
+      /* Bảng màu Giao diện Sáng (Light Mode) */
+      --bg1: #f0f4f8; 
+      --bg2: #e2e8f0;
+      --card: rgba(255, 255, 255, 0.95);
+      --panel: #f8fafc;
+      --text: #0f172a; 
+      --muted: #475569; 
+      --border: #cbd5e1;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+
+      --green-600: #059669; --green-700: #047857;
+      --sky-600: #0284c7;
+      --amber: #d97706;
+      --rose: #e11d48;
+
+      /* Cell trạng thái */
+      --current-bg: #e0f2fe;   /* phần tử đang xét */
+      --current-border: #7dd3fc;
+      --current-fg: #0369a1;
+
+      --done-bg: #f1f5f9;       /* phần tử đã duyệt */
+      --done-border: #cbd5e1;
+      --done-fg: #94a3b8;
+
+      /* Biểu đồ Đếm chẵn (Xanh lục) */
+      --bar-even-bg: rgba(52, 211, 153, 0.3);
+      --bar-even-border: #34d399;
+      --bar-even-current-bg: rgba(52, 211, 153, 0.6);
+      --bar-even-current-border: #10b981;
+      --bar-even-text: #064e3b;
+
+      /* Biểu đồ Đếm lẻ (Xanh lam) */
+      --bar-odd-bg: rgba(56, 189, 248, 0.3);
+      --bar-odd-border: #38bdf8;
+      --bar-odd-current-bg: rgba(56, 189, 248, 0.6);
+      --bar-odd-current-border: #0ea5e9;
+      --bar-odd-text: #0c4a6e;
+    }
+
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      min-height: 100vh;
+    }
+
+    .home-btn {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #ffffff; color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .home-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-color: var(--sky-600);
+      color: var(--sky-600);
+    }
+    .home-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .container{max-width:1280px;margin:0 auto;padding:24px;}
+    .header{text-align:center;margin-bottom:24px}
+
+    .chip{
+      display:inline-flex;align-items:center;gap:10px;
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:10px 16px;box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .title{font-weight:900;font-size:26px;letter-spacing:.3px}
+    .subtitle{color:var(--muted);margin-top:10px;font-size:14.5px;line-height:1.5;font-weight:500;}
+
+    .layout{
+      display:grid; grid-template-columns:1fr; gap:16px;
+    }
+    @media(min-width:1100px){
+      .layout{ grid-template-columns:4fr 8fr; }
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card-h{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:14px 18px;border-bottom:1px solid var(--border);font-weight:800;font-size:16px;
+    }
+    .card-b{padding:18px;}
+    
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+    
+    .badge{
+      display:inline-block;border:1px solid var(--border);
+      padding:4px 10px;border-radius:8px;font-weight:600;
+      font-size:13px;background:#f1f5f9;color:var(--muted);
+      box-shadow:0 1px 2px rgba(0,0,0,0.02);
+    }
+    .text-muted{color:var(--muted);font-size:13.5px;line-height:1.5;font-weight:500;}
+
+    .btn{
+      border:1px solid var(--border);border-radius:10px;
+      padding:10px 14px;font-size:14px;background:#ffffff;color:#334155;
+      cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.05);font-weight:700;
+      transition:all 0.2s ease;
+    }
+    .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none !important;}
+    .btn.green{background:var(--green-600);color:#fff;border-color:transparent;}
+    .btn.green:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(5,150,105,0.3);}
+    .btn.blue{background:var(--sky-600);color:#fff;border-color:transparent;}
+    .btn.blue:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(2,132,199,0.3);}
+    .btn.amber{background:var(--amber);color:#fff;border-color:transparent;}
+    .btn.amber:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(217,119,6,0.3);}
+    .btn.rose{background:var(--rose);color:#fff;border-color:transparent;}
+    .btn.rose:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(225,29,72,0.3);}
+    .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn.ghost:hover{background:#f1f5f9;border-color:#94a3b8;color:var(--text);}
+
+    .slider{width:100%;accent-color:var(--sky-600);cursor:pointer;}
+    .input{
+      border:1px solid var(--border);border-radius:10px;
+      padding:9px 12px;background:#ffffff;color:var(--text);
+      font-family:ui-monospace,Consolas,monospace;font-size:14px;
+      box-shadow:inset 0 1px 3px rgba(0,0,0,0.03);transition:border-color 0.2s;outline:none;
+    }
+    .input:focus{border-color:var(--sky-600);box-shadow:0 0 0 3px rgba(2,132,199,0.1);}
+    .input.short{width:100px;text-align:center;font-weight:700;font-size:15px;}
+    .input.long{min-width:220px;flex:1 1 auto;}
+
+    /* Lưới hiển thị mảng */
+    .arrGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
+      gap:12px;
+      width:100%;
+    }
+    .arrCell{
+      position:relative;
+      border-radius:14px;
+      border:1px solid var(--border);
+      box-shadow:0 2px 6px rgba(0,0,0,0.03);
+      min-height:64px;
+      font-size:18px;
+      font-weight:800;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#ffffff;
+      color:var(--text);
+      transition:.18s;
+      text-align:center;
+      line-height:1.2;
+      padding:6px;
+      word-break:break-word;
+    }
+    .arrCell.done{
+      background:var(--done-bg);
+      border-color:var(--done-border);
+      color:var(--done-fg);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .arrCell.current{
+      background:var(--current-bg);
+      border-color:var(--current-border);
+      color:var(--current-fg);
+      box-shadow:0 0 0 4px rgba(56,189,248,0.25);
+      z-index:2;
+    }
+    .idx{
+      position:absolute;
+      right:-8px;top:-8px;
+      background:#ffffff;
+      color:var(--muted);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:2px 8px;
+      font-size:11px;
+      font-weight:800;
+      box-shadow:0 2px 4px rgba(0,0,0,0.08);
+      z-index:3;
+    }
+
+    /* 2 BIỂU ĐỒ (đếm chẵn và đếm lẻ) */
+    .chartsRow{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:16px;
+    }
+    @media(min-width:820px){
+      .chartsRow{ grid-template-columns:1fr 1fr; }
+    }
+
+    .chartWrap{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .chartHeader{
+      font-size:14px;
+      font-weight:700;
+      color:var(--text);
+      margin-bottom:12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      line-height:1.4;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chartArea{
+      display:flex;
+      align-items:flex-end;
+      gap:8px;
+      min-height:140px;
+      overflow-x:auto;
+      padding-bottom:8px;
+    }
+    .barCol{
+      flex:0 0 32px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      font-size:11px;
+      line-height:1.2;
+      color:var(--text);
+    }
+    .barBox{
+      width:100%;
+      border-radius:6px 6px 2px 2px;
+      transition:height .15s, background .2s, border .2s;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      font-size:11px;
+      font-weight:800;
+      padding-bottom:4px;
+      box-sizing:border-box;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    
+    /* chẵn */
+    .evenBar{
+      border:1px solid var(--bar-even-border);
+      background:var(--bar-even-bg);
+      color:var(--bar-even-text);
+    }
+    .evenBar.currentBar{
+      background:var(--bar-even-current-bg);
+      border-color:var(--bar-even-current-border);
+      box-shadow: 0 0 0 3px rgba(52,211,153,0.3);
+    }
+    /* lẻ */
+    .oddBar{
+      border:1px solid var(--bar-odd-border);
+      background:var(--bar-odd-bg);
+      color:var(--bar-odd-text);
+    }
+    .oddBar.currentBar{
+      background:var(--bar-odd-current-bg);
+      border-color:var(--bar-odd-current-border);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.3);
+    }
+
+    .barIdxLabel{
+      margin-top:6px;
+      font-weight:800;
+      background:#ffffff;
+      border-radius:6px;
+      padding:2px 6px;
+      border:1px solid var(--border);
+      min-width:26px;
+      text-align:center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .explain{
+      background:var(--panel);
+      border-radius:14px;
+      padding:14px;
+      border:1px solid var(--border);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+      margin-top:16px;
+      color:var(--text);
+      font-size:16px; 
+      line-height:1.6;
+      white-space:pre-line;
+      font-weight:600;
+    }
+
+    ol.code{
+      background:var(--panel);
+      border-radius:14px;
+      padding:16px 16px 16px 36px;
+      list-style-type:decimal;
+      margin:0;
+      border:1px solid var(--border);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    ol.code li{
+      padding:8px 10px;
+      border-radius:8px;
+      font-family:ui-monospace,Consolas,monospace;
+      font-size:13.5px;
+      line-height:1.4;
+      font-weight:500;
+      color:#334155;
+      transition:background 0.3s;
+      margin-bottom:4px;
+    }
+    ol.code li.active{
+      background:#fef08a; /* Vàng nhạt */
+      box-shadow:0 0 0 2px #facc15 inset;
+      color:#854d0e;
+      font-weight:700;
+    }
+
+    footer{
+      margin-top:24px;
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+      font-weight:500;
+    }
+  </style>
+</head>
+<body>
+<a href="HOMEPAGE.HTML" class="home-btn" aria-label="Về trang chủ" title="Về trang chủ">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 10l9-7 9 7"/>
+    <path d="M5 10v10a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2V10"/>
+  </svg>
+</a>
+
+<div class="container">
+  <header class="header">
+    <div class="chip">
+      <span style="font-size: 22px;">🔢</span>
+      <div class="title">
+        Even/Odd Count Simulator —
+        <span style="color: var(--sky-600)">Đếm Số Chẵn / Số Lẻ</span>
+      </div>
+    </div>
+    <div class="subtitle">
+      - Duyệt từng phần tử A[i]. Nếu A[i] chẵn ➜ Số lượng chẵn + 1. Nếu A[i] lẻ ➜ Số lượng lẻ + 1.<br/>
+      - Mỗi bước hiển thị trực quan phép tăng biến đếm tương ứng.<br/>
+      - Chạy 100% offline, Giao diện Light Mode.
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="left-col">
+      <div class="card">
+        <div class="card-h">Thiết lập dãy & điều khiển</div>
+        <div class="card-b">
+
+          <div class="row">
+            <span class="badge" style="width: 120px; text-align: center;">Số phần tử (n)</span>
+            <input id="n" type="range" min="3" max="15" step="1" class="slider" style="flex:1;"/>
+            <span id="nLabel" class="badge" style="width: 40px; text-align: center;">8</span>
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <button class="btn ghost" id="btnMakeDistinct" style="flex:1;" title="Tạo mảng giá trị ngẫu nhiên không trùng">Ngẫu nhiên (không trùng)</button>
+            <button class="btn ghost" id="btnMakeMaybeDup" style="flex:1;" title="Tạo mảng ngẫu nhiên có thể lặp giá trị">Ngẫu nhiên (có lặp)</button>
+          </div>
+
+          <div class="row" style="margin-top:12px; width:100%">
+            <span class="badge" style="width: 120px; text-align: center;">Hoặc nhập thủ công</span>
+            <input id="manualArr" class="input long" placeholder="VD: 5, -2, 10, 7, 0"/>
+            <button class="btn ghost" id="btnUseManual">Dùng mảng này</button>
+          </div>
+          
+          <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+          <div class="row">
+            <span class="badge" style="width: 120px; text-align: center;">Tốc độ Auto</span>
+            <input id="speed" type="range" min="0.5" max="4.0" step="0.1" class="slider" style="flex:1;"/>
+            <span id="speedLabel" class="badge" style="width: 80px; text-align: center;">1.6s/bước</span>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn green" id="btnRun" style="flex:1;">Bắt đầu</button>
+            <button class="btn blue" id="btnStep" style="flex:1;">Bước tiếp ▷</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn amber" id="btnAuto" style="flex:1;">Chạy Tự động ▷</button>
+            <button class="btn rose" id="btnReset" style="flex:1;">Làm mới</button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Ghi chú / Xuất kết quả</div>
+        <div class="card-b">
+          <div class="text-muted">
+            - Đếm Chẵn: đếm các số chia hết cho 2.<br/>
+            - Đếm Lẻ: đếm các số không chia hết cho 2.<br/>
+            - Biểu đồ bên phải: Cột hiển thị số lượng chẵn / lẻ lũy tiến qua từng phần tử.<br/>
+            - Quiz: thử đoán tổng số lượng chẵn và lẻ trước khi chạy hết mảng.
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn ghost" id="btnExport">Xuất log .txt</button>
+          </div>
+
+          <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+          <div id="quizArea">
+            <div class="text-muted" style="font-weight: 700;">
+              Dự đoán cuối cùng:
+            </div>
+            <div class="row" style="margin-top:10px">
+              <input id="quizEven" type="number" class="input short" placeholder="S.chẵn = ?"/>
+              <input id="quizOdd" type="number" class="input short" placeholder="S.lẻ = ?"/>
+              <button class="btn ghost" id="btnQuiz">Kiểm tra</button>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <span class="badge" id="expectedEven"></span>
+              <span class="badge" id="expectedOdd"></span>
+            </div>
+
+            <div id="quizResult" class="explain" style="display:none;margin-top:12px; font-size: 15px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="card">
+        <div class="card-h">Mô phỏng Đếm chẵn / Đếm lẻ</div>
+        <div class="card-b">
+
+          <div class="row" style="margin-bottom:12px">
+            <span class="badge">i = <span id="badgeI" style="font-weight: 800; color: var(--text);">0</span></span>
+            <span class="badge">A[i] = <span id="badgeVal" style="font-weight: 800; color: var(--sky-600);">?</span></span>
+            <span class="badge">Số chẵn = <span id="badgeEven" style="font-weight: 800; color: var(--green-600);">0</span></span>
+            <span class="badge">Số lẻ = <span id="badgeOdd" style="font-weight: 800; color: var(--sky-600);">0</span></span>
+            <span class="badge">đã duyệt = <span id="badgeDone" style="color: var(--amber);">0</span> / <span id="badgeNTotal">0</span></span>
+            <span class="badge" id="badgeState" style="margin-left: auto; border-color: var(--sky-600); color: var(--sky-600);">chưa bắt đầu</span>
+          </div>
+
+          <div id="arrGrid" class="arrGrid"></div>
+
+          <div class="chartsRow" style="margin-top: 16px;">
+            <div class="chartWrap">
+              <div class="chartHeader">
+                <span style="color: var(--green-600);">Số Chẵn lũy tiến</span>
+                <span style="font-size:12px;color:var(--muted); font-weight: 500;">
+                  Cột đang cập nhật: sáng hơn
+                </span>
+              </div>
+              <div id="evenChart" class="chartArea"></div>
+            </div>
+
+            <div class="chartWrap">
+              <div class="chartHeader">
+                <span style="color: var(--sky-600);">Số Lẻ lũy tiến</span>
+                <span style="font-size:12px;color:var(--muted); font-weight: 500;">
+                  Cột đang cập nhật: sáng hơn
+                </span>
+              </div>
+              <div id="oddChart" class="chartArea"></div>
+            </div>
+          </div>
+
+          <div id="explain" class="explain"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Mã giả thuật toán</div>
+        <div class="card-b">
+          <ol id="code" class="code"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© <span id="y"></span> — Mô phỏng giáo dục, bản offline. Giao diện Light Mode.</footer>
+</div>
+
+<script>
+/*
+  =====================================================
+  Even/Odd Count Simulator (Light Mode)
+  Author: GPT-5 Thinking
+  Date: 2025-10-27
+*/
+
+const state = {
+  n: 8,
+  arr: [],          
+  evenPrefix: [],
+  oddPrefix:  [],
+  i: 0,
+  evenCount: 0,
+  oddCount: 0,
+  doneCount: 0,
+  finished: false,
+
+  speed: 1.6,
+  autoPlay: false,
+  timer: null,
+
+  explain: "Tạo mảng rồi bấm Bắt đầu hoặc Bước tiếp.",
+  line: null,
+  logLines: []
+};
+
+/* ============ Helpers ============ */
+const $ = (id)=>document.getElementById(id);
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function createArray(n, distinct){
+  const used = new Set();
+  const out = [];
+  for(let k=0;k<n;k++){
+    let v = randInt(1,50); 
+    if(distinct){
+      while(used.has(v)) v = randInt(1,50);
+      used.add(v);
+    }
+    out.push({value:v, status:"idle"});
+  }
+  return out;
+}
+
+function isEven(x){
+  return x % 2 === 0;
+}
+
+/* ============ One Step of Simulation ============ */
+function stepOne(){
+  if(state.finished){
+    state.explain =
+      `Hoàn tất.\n`+
+      `Số lượng chẵn = ${state.evenCount}.\n`+
+      `Số lượng lẻ = ${state.oddCount}.`;
+    state.line = 5;
+    pushLog(state.explain);
+    return false;
+  }
+
+  if(state.arr.length===0){
+    state.explain = "Mảng rỗng. Hãy tạo mảng trước.";
+    state.line = null;
+    return false;
+  }
+
+  if(state.doneCount===0 && state.i===0 && !anyCellCurrent()){
+    markCurrent(state.i);
+    state.explain =
+      `Bắt đầu: Đếm chẵn = 0; Đếm lẻ = 0.\n`+
+      `Xét A[0] = ${state.arr[0].value}.`;
+    state.line = 0;
+    pushLog(state.explain);
+    return true;
+  }
+
+  if(state.i >= state.arr.length){
+    finishAll();
+    return false;
+  }
+
+  const val = state.arr[state.i].value;
+
+  if(isEven(val)){
+    state.evenCount = state.evenCount + 1;
+  } else {
+    state.oddCount = state.oddCount + 1;
+  }
+
+  state.evenPrefix[state.i] = state.evenCount;
+  state.oddPrefix[state.i]  = state.oddCount;
+
+  state.arr[state.i].status = "done";
+  state.doneCount++;
+
+  const evenLine = isEven(val)
+    ? `A[${state.i}] = ${val} là số Chẵn; Đếm Chẵn tăng 1 ➜ Số chẵn = ${state.evenCount};`
+    : `A[${state.i}] = ${val}; Đếm Chẵn không đổi = ${state.evenCount};`;
+
+  const oddLine = isEven(val)
+    ? `A[${state.i}] = ${val}; Đếm Lẻ không đổi = ${state.oddCount};`
+    : `A[${state.i}] = ${val} là số Lẻ; Đếm Lẻ tăng 1 ➜ Số lẻ = ${state.oddCount};`;
+
+  state.explain = evenLine + "\n" + oddLine;
+
+  state.line = 2;
+  pushLog(state.explain);
+
+  state.i++;
+
+  if(state.i >= state.arr.length){
+    finishAll();
+    return false;
+  } else {
+    markCurrent(state.i);
+    return true;
+  }
+}
+
+/* ============ Finish ============ */
+function finishAll(){
+  state.finished = true;
+  clearCurrent();
+  for(const cell of state.arr){
+    if(cell.status==="idle"||cell.status==="current"){
+      cell.status="done";
+    }
+  }
+
+  state.explain =
+    `Hoàn tất.\n`+
+    `Số lượng chẵn = ${state.evenCount}.\n`+
+    `Số lượng lẻ = ${state.oddCount}.`;
+  state.line = 5;
+  pushLog(state.explain);
+}
+
+/* ============ Playback (Auto) ============ */
+function autoLoop(){
+  if(!state.autoPlay) return;
+  const cont = stepOne();
+  renderAll();
+  if(cont){
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*700));
+  } else {
+    state.autoPlay=false;
+  }
+}
+
+/* ============ State Reset & Init ============ */
+function resetKeepArray(){
+  for(const cell of state.arr){
+    cell.status="idle";
+  }
+  state.evenPrefix = new Array(state.arr.length).fill(null);
+  state.oddPrefix  = new Array(state.arr.length).fill(null);
+
+  state.i=0;
+  state.evenCount=0;
+  state.oddCount=0;
+  state.doneCount=0;
+  state.finished=false;
+
+  state.autoPlay=false;
+  clearTimeout(state.timer);
+  state.timer=null;
+
+  state.explain = "Đã làm mới. Số lượng chẵn = 0; Số lượng lẻ = 0. Sẵn sàng chạy lại.";
+  state.line = null;
+  state.logLines=[];
+  $("quizResult").style.display="none";
+  pushLog("Reset tiến trình.");
+}
+
+function fullInitArrayRandom(distinct){
+  state.arr = createArray(state.n, distinct);
+  resetKeepArray();
+}
+
+function useManualArray(){
+  const raw = $("manualArr").value.trim();
+  if(!raw){
+    state.explain="❌ Chuỗi trống. Ví dụ: 5, 2, 10, 7, 3";
+    renderAll();
+    return;
+  }
+  const parts = raw.split(/[\s,;]+/).filter(s=>s.length>0);
+  const nums = parts.map(x=>parseFloat(x)).filter(v=>Number.isFinite(v));
+  if(nums.length === 0){
+    state.explain="❌ Dãy số không hợp lệ.";
+    renderAll();
+    return;
+  }
+  state.arr = nums.map(v=>({value:v,status:"idle"}));
+  state.n = state.arr.length;
+  resetKeepArray();
+}
+
+/* ============ Log & Export ============ */
+function pushLog(msg){
+  state.logLines.push(msg);
+}
+
+function exportLog(){
+  const blob = new Blob([state.logLines.join("\n")], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const now = new Date();
+  const stamp =
+    now.getFullYear()
+    + ("0"+(now.getMonth()+1)).slice(-2)
+    + ("0"+now.getDate()).slice(-2)
+    + "_"
+    + ("0"+now.getHours()).slice(-2)
+    + ("0"+now.getMinutes()).slice(-2)
+    + ("0"+now.getSeconds()).slice(-2);
+
+  a.href = url;
+  a.download = "log_even_odd_count_" + stamp + ".txt";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+/* ============ Quiz ============ */
+function updateExpectedBadges(){
+  if(state.finished){
+    $("expectedEven").textContent = "Số chẵn = " + state.evenCount;
+    $("expectedOdd").textContent  = "Số lẻ = "   + state.oddCount;
+    $("expectedEven").style.display = "inline-block";
+    $("expectedOdd").style.display = "inline-block";
+  }else{
+    $("expectedEven").style.display = "none";
+    $("expectedOdd").style.display = "none";
+  }
+}
+
+function checkQuiz(){
+  const resEl = $("quizResult");
+  const guessEven = parseFloat($("quizEven").value);
+  const guessOdd  = parseFloat($("quizOdd").value);
+
+  if(state.arr.length===0){
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.textContent="⚠️ Hãy tạo mảng trước.";
+    return;
+  }
+  if(!state.finished){
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.textContent="⏳ Chưa duyệt hết mảng. Hãy Step/AUTO đến hết để chấm.";
+    return;
+  }
+
+  let msg = "";
+  let allCorrect = true;
+
+  if(Number.isFinite(guessEven)){
+    if(guessEven===state.evenCount){
+      msg += "✅ Số lượng chẵn: Chính xác!\n";
+    } else {
+      msg += `❌ Số lượng chẵn: Chưa đúng (Thực tế: ${state.evenCount})\n`;
+      allCorrect = false;
+    }
+  } else {
+    msg += "⚠️ Bạn chưa nhập Số lượng chẵn hoặc không hợp lệ.\n";
+    allCorrect = false;
+  }
+
+  if(Number.isFinite(guessOdd)){
+    if(guessOdd===state.oddCount){
+      msg += "✅ Số lượng lẻ: Chính xác!";
+    } else {
+      msg += `❌ Số lượng lẻ: Chưa đúng (Thực tế: ${state.oddCount})`;
+      allCorrect = false;
+    }
+  } else {
+    msg += "⚠️ Bạn chưa nhập Số lượng lẻ hoặc không hợp lệ.";
+    allCorrect = false;
+  }
+
+  resEl.style.display="block";
+  resEl.style.color = allCorrect ? "var(--green-700)" : "var(--rose)";
+  resEl.innerHTML = msg.replace(/\n/g, "<br>");
+}
+
+/* ============ Render Code (pseudo code) ============ */
+const codeLines = [
+  "evenCount ← 0",
+  "oddCount  ← 0",
+  "i ← 0",
+  "while i < n:",
+  "    nếu A[i] chẵn:",
+  "        evenCount ← evenCount + 1",
+  "    ngược lại:",
+  "        oddCount  ← oddCount + 1",
+  "    evenPrefix[i] ← evenCount",
+  "    oddPrefix[i]  ← oddCount",
+  "    i ← i + 1",
+  "return evenCount, oddCount"
+];
+
+function renderCode(){
+  const list = $("code");
+  list.innerHTML = "";
+  codeLines.forEach((ln,idx)=>{
+    const li=document.createElement("li");
+    li.textContent=(idx+1)+". "+ln;
+    if(state.line===idx) li.classList.add("active");
+    list.appendChild(li);
+  });
+}
+
+/* ============ Render Array Grid ============ */
+function renderGrid(){
+  const grid = $("arrGrid");
+  grid.innerHTML = "";
+
+  for(let idx=0; idx<state.arr.length; idx++){
+    const cell = state.arr[idx];
+    let cls = "arrCell ";
+    if(cell.status==="done") cls += "done ";
+    if(cell.status==="current") cls += "current ";
+
+    const d = document.createElement("div");
+    d.className = cls.trim();
+    d.innerHTML = `<span class="idx">${idx}</span>${cell.value}`;
+    grid.appendChild(d);
+  }
+}
+
+/* ============ Render Charts ============ */
+function renderEvenChart(){
+  const area = $("evenChart");
+  area.innerHTML = "";
+
+  const vals = state.evenPrefix.filter(v=>Number.isFinite(v));
+  const maxValAbs = vals.length ? Math.max(...vals.map(x=>Math.abs(x))) : 1;
+
+  for(let idx=0; idx<state.arr.length; idx++){
+    const ev = state.evenPrefix[idx];
+    const col = document.createElement("div");
+    col.className = "barCol";
+
+    const bar = document.createElement("div");
+    const heightPct = Number.isFinite(ev)
+      ? (Math.abs(ev)/maxValAbs)*100
+      : 0;
+
+    let barCls = "barBox evenBar";
+    if(state.doneCount-1 === idx && Number.isFinite(ev) && !state.finished){
+      barCls += " currentBar";
+    }
+
+    bar.className = barCls;
+    bar.style.height = (heightPct*1.1 + 10) + "px";
+    bar.textContent = Number.isFinite(ev) ? ev : "";
+
+    const idxLabel = document.createElement("div");
+    idxLabel.className = "barIdxLabel";
+    idxLabel.textContent = idx;
+
+    col.appendChild(bar);
+    col.appendChild(idxLabel);
+    area.appendChild(col);
+  }
+}
+
+function renderOddChart(){
+  const area = $("oddChart");
+  area.innerHTML = "";
+
+  const vals = state.oddPrefix.filter(v=>Number.isFinite(v));
+  const maxValAbs = vals.length ? Math.max(...vals.map(x=>Math.abs(x))) : 1;
+
+  for(let idx=0; idx<state.arr.length; idx++){
+    const ov = state.oddPrefix[idx];
+    const col = document.createElement("div");
+    col.className = "barCol";
+
+    const bar = document.createElement("div");
+    const heightPct = Number.isFinite(ov)
+      ? (Math.abs(ov)/maxValAbs)*100
+      : 0;
+
+    let barCls = "barBox oddBar";
+    if(state.doneCount-1 === idx && Number.isFinite(ov) && !state.finished){
+      barCls += " currentBar";
+    }
+
+    bar.className = barCls;
+    bar.style.height = (heightPct*1.1 + 10) + "px";
+    bar.textContent = Number.isFinite(ov) ? ov : "";
+
+    const idxLabel = document.createElement("div");
+    idxLabel.className = "barIdxLabel";
+    idxLabel.textContent = idx;
+
+    col.appendChild(bar);
+    col.appendChild(idxLabel);
+    area.appendChild(col);
+  }
+}
+
+/* ============ Render Badges / Explain ============ */
+function renderBadges(){
+  $("badgeI").textContent = state.i;
+  $("badgeVal").textContent =
+    (state.i < state.arr.length && !state.finished)
+      ? state.arr[state.i].value
+      : "?";
+
+  $("badgeEven").textContent = state.evenCount;
+  $("badgeOdd").textContent  = state.oddCount;
+
+  $("badgeDone").textContent = state.doneCount;
+  $("badgeNTotal").textContent = state.arr.length;
+
+  let stText="đang chạy";
+  if(state.arr.length===0) stText="chưa có mảng";
+  if(state.finished) stText="đã xong";
+  $("badgeState").textContent = stText;
+  $("badgeState").style.color = state.finished ? "var(--green-600)" : "var(--sky-600)";
+  $("badgeState").style.borderColor = state.finished ? "var(--green-600)" : "var(--sky-600)";
+
+  $("n").value = state.n;
+  $("nLabel").textContent = state.n;
+  $("speed").value = state.speed;
+  $("speedLabel").textContent = state.speed.toFixed(1)+"s/bước";
+
+  $("explain").innerHTML = state.explain ? state.explain.replace(/\n/g, '<br/>') : "";
+}
+
+function renderAll(){
+  renderBadges();
+  renderGrid();
+  renderEvenChart();
+  renderOddChart();
+  renderCode();
+  updateExpectedBadges();
+  $("y").textContent = new Date().getFullYear();
+}
+
+/* ============ UI Wiring ============ */
+function wire(){
+  $("n").addEventListener("input", e=>{
+    state.n = Number(e.target.value);
+    fullInitArrayRandom(true);
+    renderAll();
+  });
+
+  $("btnMakeDistinct").addEventListener("click", ()=>{
+    fullInitArrayRandom(true);
+    renderAll();
+  });
+
+  $("btnMakeMaybeDup").addEventListener("click", ()=>{
+    fullInitArrayRandom(false);
+    renderAll();
+  });
+
+  $("btnUseManual").addEventListener("click", ()=>{
+    useManualArray();
+    renderAll();
+  });
+
+  $("speed").addEventListener("input", e=>{
+    state.speed = Number(e.target.value);
+    renderAll();
+  });
+
+  $("btnRun").addEventListener("click", ()=>{
+    if(state.arr.length===0){
+      fullInitArrayRandom(true);
+    }
+    const cont = stepOne();
+    renderAll();
+  });
+
+  $("btnStep").addEventListener("click", ()=>{
+    state.autoPlay=false;
+    clearTimeout(state.timer);
+    if(state.arr.length===0){
+      fullInitArrayRandom(true);
+    }
+    stepOne();
+    renderAll();
+  });
+
+  $("btnAuto").addEventListener("click", ()=>{
+    state.autoPlay=true;
+    clearTimeout(state.timer);
+    if(state.arr.length===0){
+      fullInitArrayRandom(true);
+    }
+    stepOne(); 
+    renderAll();
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*400));
+  });
+
+  $("btnReset").addEventListener("click", ()=>{
+    resetKeepArray();
+    renderAll();
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    exportLog();
+  });
+
+  $("btnQuiz").addEventListener("click", ()=>{
+    $("quizResult").style.display="block";
+    checkQuiz();
+  });
+}
+
+/* ============ Current Highlight Helpers ============ */
+function markCurrent(idx){
+  clearCurrent();
+  if(idx < state.arr.length){
+    if(state.arr[idx].status==="idle"){
+      state.arr[idx].status="current";
+    }
+  }
+}
+function clearCurrent(){
+  for(const cell of state.arr){
+    if(cell.status==="current"){
+      cell.status="idle";
+    }
+  }
+}
+function anyCellCurrent(){
+  return state.arr.some(c=>c.status==="current");
+}
+
+/* ============ Init ============ */
+(function init(){
+  state.speed = 1.6;
+  state.n = 8;
+  fullInitArrayRandom(true);
+  renderAll();
+  wire();
+})();
+</script>
+</body>
+</html>

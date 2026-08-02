@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Selection Sort Simulator – Offline</title>
+  <style>
+    :root {
+      /* Bảng màu Giao diện Sáng (Light Mode) */
+      --bg1: #f0f4f8; 
+      --bg2: #e2e8f0;
+      --card: rgba(255, 255, 255, 0.95);
+      --panel: #f8fafc;
+      --border: #cbd5e1;
+      --text: #0f172a; 
+      --text-dim: #475569; 
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+
+      --accent: #0284c7;  /* Xanh lam */
+      --accent2: #059669; /* Xanh lục */
+      --accent3: #f59e0b; /* Vàng hổ phách */
+      --chip: #f1f5f9;
+    }
+    
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; }
+    body {
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    .home-btn {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #ffffff; color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .home-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .home-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    
+    .h1 {
+      font-size: 28px; font-weight: 900;
+      margin: 4px 0 8px; text-align: center;
+      color: var(--text); letter-spacing: 0.3px;
+    }
+    .sub {
+      font-size: 14.5px; font-weight: 500;
+      color: var(--text-dim); text-align: center;
+      margin-bottom: 20px; line-height: 1.5;
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-top: 16px; }
+    @media(min-width: 1024px) { .grid { grid-template-columns: 1fr 3fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card.dark { background: var(--card); }
+
+    label { font-size: 14px; color: var(--text-dim); font-weight: 600; display: block; }
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+    
+    .btn {
+      padding: 10px 14px; border-radius: 10px;
+      border: 1px solid var(--border); background: #ffffff;
+      color: #334155; cursor: pointer; font-weight: 700;
+      font-size: 14px; line-height: 1.2;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+    .btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
+    .btn.green { background: var(--accent2); border-color: transparent; color: #fff; }
+    .btn.blue { background: #1d4ed8; border-color: transparent; color: #fff; }
+    .btn:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .btn.ghost { background: transparent; }
+    .btn.ghost:hover { background: #f1f5f9; border-color: #94a3b8; color: var(--text); }
+
+    input[type="number"], input[type="text"] {
+      padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--border); background: #ffffff;
+      color: var(--text); font-size: 14px; line-height: 1.2;
+      flex: 1; min-width: 0; font-family: ui-monospace, Consolas, monospace;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+      transition: border-color 0.2s;
+    }
+    input[type="number"]:focus, input[type="text"]:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    }
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; margin-top: 8px; }
+    
+    .controls { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    
+    .counter {
+      font-size: 15px; color: var(--text); font-weight: 700;
+      margin-bottom: 12px; display: inline-block;
+      padding: 6px 12px; background: #f1f5f9; border-radius: 8px; border: 1px solid var(--border);
+    }
+
+    .stage {
+      position: relative; background: var(--panel); 
+      border: 1px solid var(--border); border-radius: 14px; 
+      padding: 16px; min-height: 380px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    
+    .legend {
+      position: absolute; left: 16px; top: 12px; 
+      display: flex; gap: 12px; font-size: 13px; color: #334155; font-weight: 600;
+    }
+    .legend div {
+      background: var(--chip); border: 1px solid var(--border); 
+      padding: 4px 10px; border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .bar-area {
+      position: relative; border-radius: 12px; 
+      display: flex; align-items: flex-end; gap: 16px; height: 320px; padding-left: 40px;
+      overflow: hidden; margin-top: 24px;
+    }
+    .bar {
+      width: 64px; border-radius: 8px;
+      display: flex; align-items: flex-end; justify-content: center;
+      font-size: 15px; font-weight: 700; padding-bottom: 6px;
+      color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+      transition: height .2s ease;
+      box-shadow: inset 0 -20px 40px rgba(0,0,0,.15), 0 4px 6px rgba(0,0,0,0.1);
+      user-select: none;
+    }
+    
+    .blink { animation: blink .8s linear infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; filter: brightness(1.2); } }
+    
+    .ring-min { 
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.8), 0 0 12px rgba(245, 158, 11, 0.4) !important; 
+    }
+
+    .note {
+      margin-top: 16px; background: var(--panel);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 16px; font-size: 15px; font-weight: 500;
+      color: var(--text); min-height: 48px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .chip { font-variant-numeric: tabular-nums; }
+    
+    /* Color palette */
+    .c-rose { background: #e11d48; }
+    .c-amber { background: #d97706; }
+    .c-emerald { background: #059669; }
+    .c-cyan { background: #0891b2; }
+    .c-indigo { background: #4f46e5; }
+    .c-fuchsia { background: #c026d3; }
+    .c-lime { background: #65a30d; }
+    .c-orange { background: #ea580c; }
+    .c-teal { background: #0d9488; }
+    .c-violet { background: #7c3aed; }
+    
+    .footer { font-size: 13px; color: var(--text-dim); text-align: center; margin-top: 20px; font-weight: 500; }
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <a href="HOMEPAGE.HTML" class="home-btn" aria-label="Về trang chủ" title="Về trang chủ">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 10l9-7 9 7"/>
+    <path d="M5 10v10a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2V10"/>
+  </svg>
+</a>
+  <div class="wrap">
+    <header style="text-align:center">
+      <h1 class="h1">Selection Sort Simulator – Mô phỏng Sắp xếp Chọn (Offline)</h1>
+      <p class="sub">Nhấp nháy phần tử đang so sánh; “Min” là <b>giá trị</b> nhỏ nhất hiện tại. Khi đổi chỗ, hiển thị mũi tên 2 đầu giữa 2 phần tử, không nhấc phần tử ra ngoài. Khối danh sách luôn đứng yên.</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div>
+          <label>Số phần tử</label>
+          <div class="row">
+            <input id="inpN" type="number" min="2" max="80" value="10" style="flex:0 0 auto; width:80px" />
+            <button id="btnRnd" class="btn primary">Tạo ngẫu nhiên</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+          <label>Dãy số tự nhập</label>
+          <div class="row">
+            <input id="inpText" type="text" placeholder="vd: 5 3 9 7 2" style="flex:1" />
+            <button id="btnApply" class="btn">Áp dụng</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+          <label id="lblSpeed">Tốc độ tự động: 600ms</label>
+          <input id="rngSpeed" type="range" min="100" max="1500" step="50" value="600" />
+        </div>
+
+        <div class="controls">
+          <button id="btnAuto" class="btn green">Chạy Tự động</button>
+          <button id="btnNext" class="btn blue">Thao tác tiếp ▷</button>
+          <button id="btnPrev" class="btn ghost">◁ Quay lại</button>
+          <button id="btnReset" class="btn ghost">Làm mới</button>
+        </div>
+      </div>
+
+      <div class="card dark">
+        <div id="counter" class="counter">Thao tác: 0/0</div>
+        <div class="stage">
+          <div class="legend">
+            <div id="lgI" class="chip">i = -</div>
+            <div id="lgJ" class="chip">j = -</div>
+            <div id="lgMin" class="chip">min = -</div>
+          </div>
+          <div id="barArea" class="bar-area"></div>
+          <svg id="overlay" class="overlay" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"></svg>
+        </div>
+        <div id="note" class="note">Sẵn sàng mô phỏng. Bấm "Thao tác tiếp" để bắt đầu.</div>
+      </div>
+    </div>
+
+    <div class="footer">Chạy 100% offline – không dùng CDN.</div>
+  </div>
+
+  <script>
+  (function(){
+    // ===== Geometry consistent with original =====
+    const BAR_W = 64, GAP = 16, PAD_L = 40, HEIGHT = 320;
+
+    // ===== Helpers =====
+    const $ = sel => document.querySelector(sel);
+    const e = (tag, props={}, ...kids)=>{
+      const n = document.createElement(tag);
+      for(const k in props){
+        if(k === "class") n.className = props[k];
+        else if(k === "style") Object.assign(n.style, props[k]);
+        else n.setAttribute(k, props[k]);
+      }
+      for(const child of kids){
+        if(child == null) continue;
+        if(typeof child === "string") n.appendChild(document.createTextNode(child));
+        else n.appendChild(child);
+      }
+      return n;
+    };
+
+    // Palette
+    const palette = ["c-rose","c-amber","c-emerald","c-cyan","c-indigo","c-fuchsia","c-lime","c-orange","c-teal","c-violet"];
+    const colorMapOf = (n)=>{const m=new Map(); for(let i=0;i<n;i++) m.set(i, palette[i%palette.length]); return m;};
+
+    const toItems = (arr)=>arr.map((v,i)=>({v,id:i}));
+    const cloneItems = (a)=>a.map(x=> x ? {...x} : null);
+
+    const mkStep = (s)=>({
+      array: cloneItems(s.array), i:s.i, j:s.j, minIdx:s.minIdx, minVal:s.minVal,
+      phase:s.phase, note:s.note, colorMap: new Map(s.colorMap)
+    });
+
+    function buildSelectionSteps(arr){
+      const items = toItems(arr);
+      const colorMap = colorMapOf(items.length);
+      const steps=[]; 
+      if(items.length===0){
+        steps.push(mkStep({array:[],i:null,j:null,minIdx:null,minVal:null,phase:'done',note:'Dãy rỗng',colorMap}));
+        return steps;
+      }
+      steps.push(mkStep({array:items,i:0,j:null,minIdx:null,minVal:null,phase:'init',note:'Bắt đầu: i = 0',colorMap}));
+
+      const a = cloneItems(items);
+      for(let i=0;i<a.length-1;i++){
+        let minIdx=i; let minVal=a[i].v;
+        steps.push(mkStep({array:a,i,j:i+1,minIdx,minVal,phase:'scan',note:`Bắt đầu vòng i=${i}, min = ${minVal}`,colorMap}));
+        for(let j=i+1;j<a.length;j++){
+          steps.push(mkStep({array:a,i,j,minIdx,minVal,phase:'scan',note:`So sánh a[${j}] = ${a[j].v} với min hiện tại = ${minVal}`,colorMap}));
+          if(a[j].v < minVal){
+            minIdx=j; minVal=a[j].v;
+            steps.push(mkStep({array:a,i,j,minIdx,minVal,phase:'newMin',note:`Cập nhật min = ${minVal} tại vị trí ${minIdx}`,colorMap}));
+          }
+        }
+        if(minIdx!==i){
+          steps.push(mkStep({array:a,i,j:null,minIdx,minVal,phase:'swap',note:`Đổi chỗ a[${i}] và a[${minIdx}]`,colorMap}));
+          const tmp = a[i]; a[i]=a[minIdx]; a[minIdx]=tmp;
+          steps.push(mkStep({array:a,i:null,j:null,minIdx:null,minVal:null,phase:'afterSwap',note:`Sau hoán vị tại i=${i}`,colorMap}));
+        }else{
+          steps.push(mkStep({array:a,i:null,j:null,minIdx,minVal,phase:'afterSwap',note:`min đã ở đúng vị trí (i=${i})`,colorMap}));
+        }
+      }
+      steps.push(mkStep({array:a,i:null,j:null,minIdx:null,minVal:null,phase:'done',note:'Sắp xếp hoàn tất!',colorMap}));
+      return steps;
+    }
+
+    // ===== State =====
+    let N = 10;
+    let txt = "";
+    let speed = 600;
+    let auto = false;
+    let timer = null;
+
+    let steps = buildSelectionSteps([5,3,9,7,2]);
+    let idx = 0;
+
+    // ===== UI Elements =====
+    const inpN = $("#inpN");
+    const btnRnd = $("#btnRnd");
+    const inpText = $("#inpText");
+    const btnApply = $("#btnApply");
+    const rngSpeed = $("#rngSpeed");
+    const lblSpeed = $("#lblSpeed");
+    const btnAuto = $("#btnAuto");
+    const btnNext = $("#btnNext");
+    const btnPrev = $("#btnPrev");
+    const btnReset = $("#btnReset");
+    const counter = $("#counter");
+    const barArea = $("#barArea");
+    const overlay = $("#overlay");
+    const note = $("#note");
+    const lgI = $("#lgI"), lgJ=$("#lgJ"), lgMin=$("#lgMin");
+
+    // ===== Render functions =====
+    function getBarHeightScale(arrayVals){
+      const vals = arrayVals.filter(x=>x!==null).map(x=>x.v);
+      const max = Math.max(1, ...vals);
+      return (v)=> Math.round((v/max)*250)+30;
+    }
+
+    function renderBars(step){
+      barArea.innerHTML="";
+      overlay.innerHTML="";
+      const hScale = getBarHeightScale(step.array);
+
+      step.array.forEach((item, index)=>{
+        const h = item ? hScale(item.v) : 6;
+        const div = e("div", {class:"bar " + (item? step.colorMap.get(item.id):"")});
+        div.style.height = h + "px";
+        if(index===step.minIdx && (step.phase==='scan' || step.phase==='newMin')) div.classList.add("ring-min");
+        if(index===step.j && step.phase==='scan') div.classList.add("blink");
+        div.textContent = item ? String(item.v) : "";
+        barArea.appendChild(div);
+      });
+
+      // Min label - Đổi màu chữ sang cam đậm cho dễ nhìn trên nền sáng
+      if(step.minIdx!==null && (step.phase==='scan' || step.phase==='newMin')){
+        const x = PAD_L + step.minIdx*(BAR_W+GAP) + BAR_W/2;
+        const h = getBarHeightScale(step.array)(step.minVal);
+        const y = HEIGHT - h - 12;
+        const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+        t.setAttribute("x", x);
+        t.setAttribute("y", y);
+        t.setAttribute("fill", "#ea580c"); // Orange 600
+        t.setAttribute("font-size","15");
+        t.setAttribute("text-anchor","middle");
+        t.style.fontWeight = 800;
+        t.textContent = "Min";
+        overlay.appendChild(t);
+      }
+
+      // Swap arrow (two-headed) under bars - Đổi màu sang cam đậm
+      if(step.phase==='swap' && step.i!==null && step.minIdx!==null){
+        const left = Math.min(step.i, step.minIdx);
+        const right = Math.max(step.i, step.minIdx);
+        const x1 = PAD_L + left*(BAR_W+GAP) + BAR_W/2;
+        const x2 = PAD_L + right*(BAR_W+GAP) + BAR_W/2;
+        const yBase = HEIGHT - 8;
+        const midY  = HEIGHT + 40;
+
+        const defs = document.createElementNS("http://www.w3.org/2000/svg","defs");
+        const mRight = document.createElementNS("http://www.w3.org/2000/svg","marker");
+        mRight.setAttribute("id","arrowHeadRight");
+        mRight.setAttribute("markerWidth","10");
+        mRight.setAttribute("markerHeight","10");
+        mRight.setAttribute("refX","10");
+        mRight.setAttribute("refY","5");
+        mRight.setAttribute("orient","auto");
+        const pR = document.createElementNS("http://www.w3.org/2000/svg","path");
+        pR.setAttribute("d","M 0 0 L 10 5 L 0 10 z");
+        pR.setAttribute("fill","#ea580c"); // Orange 600
+        mRight.appendChild(pR);
+
+        const mLeft = document.createElementNS("http://www.w3.org/2000/svg","marker");
+        mLeft.setAttribute("id","arrowHeadLeft");
+        mLeft.setAttribute("markerWidth","10");
+        mLeft.setAttribute("markerHeight","10");
+        mLeft.setAttribute("refX","0");
+        mLeft.setAttribute("refY","5");
+        mLeft.setAttribute("orient","auto");
+        const pL = document.createElementNS("http://www.w3.org/2000/svg","path");
+        pL.setAttribute("d","M 10 0 L 0 5 L 10 10 z");
+        pL.setAttribute("fill","#ea580c"); // Orange 600
+        mLeft.appendChild(pL);
+
+        defs.appendChild(mRight);
+        defs.appendChild(mLeft);
+        overlay.appendChild(defs);
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+        path.setAttribute("d", `M ${x1} ${yBase} Q ${(x1+x2)/2} ${midY}, ${x2} ${yBase}`);
+        path.setAttribute("fill","none");
+        path.setAttribute("stroke","#ea580c"); // Orange 600
+        path.setAttribute("stroke-width","3");
+        path.setAttribute("marker-start","url(#arrowHeadLeft)");
+        path.setAttribute("marker-end","url(#arrowHeadRight)");
+        overlay.appendChild(path);
+
+        const t1 = document.createElementNS("http://www.w3.org/2000/svg","text");
+        t1.setAttribute("x", x1);
+        t1.setAttribute("y", yBase-6);
+        t1.setAttribute("fill", "#ea580c"); // Orange 600
+        t1.setAttribute("font-size","13");
+        t1.setAttribute("font-weight","700");
+        t1.setAttribute("text-anchor","middle");
+        t1.textContent = `a[${left}]`;
+        overlay.appendChild(t1);
+
+        const t2 = document.createElementNS("http://www.w3.org/2000/svg","text");
+        t2.setAttribute("x", x2);
+        t2.setAttribute("y", yBase-6);
+        t2.setAttribute("fill", "#ea580c"); // Orange 600
+        t2.setAttribute("font-size","13");
+        t2.setAttribute("font-weight","700");
+        t2.setAttribute("text-anchor","middle");
+        t2.textContent = `a[${right}]`;
+        overlay.appendChild(t2);
+      }
+    }
+
+    function render(){
+      const step = steps[idx];
+      lgI.textContent = "i = " + (step.i!=null ? step.i : "-");
+      lgJ.textContent = "j = " + (step.j!=null ? step.j : "-");
+      lgMin.textContent = "min = " + (step.minVal!=null ? step.minVal : "-");
+      
+      renderBars(step);
+      
+      note.textContent = step.note;
+      counter.textContent = "Thao tác: " + idx + " / " + (steps.length-1);
+      btnAuto.textContent = (step && step.phase==='done') ? "Xong" : (auto ? "Tạm dừng" : "Chạy Tự động");
+    }
+
+    function build(arr){
+      steps = buildSelectionSteps(arr);
+      idx = 0;
+      auto = false;
+      if(timer){ clearInterval(timer); timer=null; }
+      render();
+    }
+
+    function randomize(){
+      const n = Math.max(2, Math.min(50, Number(inpN.value)||10));
+      const a = Array.from({length:n},()=>Math.floor(Math.random()*90)+1);
+      build(a);
+    }
+
+    function applyInput(){
+      const parts = inpText.value.split(/[ ,;\\n\\t]+/).map(x=>x.trim()).filter(Boolean).map(Number).filter(Number.isFinite);
+      if(parts.length) build(parts.slice(0,80));
+    }
+
+    function setAuto(on){
+      if(on){
+        auto = true;
+        timer = setInterval(()=>{
+          if(idx < steps.length-1) idx++;
+          else auto=false;
+          if(!auto && timer){ clearInterval(timer); timer=null; }
+          render();
+        }, Math.max(60, speed));
+      }else{
+        auto = false;
+        if(timer){ clearInterval(timer); timer=null; }
+        render();
+      }
+    }
+
+    // ===== Wire UI =====
+    btnRnd.addEventListener("click", randomize);
+    btnApply.addEventListener("click", applyInput);
+    rngSpeed.addEventListener("input", (ev)=>{
+      speed = +ev.target.value;
+      lblSpeed.textContent = "Tốc độ tự động: " + speed + "ms";
+      if(auto){ 
+        setAuto(false); setAuto(true);
+      }
+    });
+    btnAuto.addEventListener("click", ()=>{
+      const step = steps[idx];
+      if(step && step.phase==='done'){ return; }
+      setAuto(!auto);
+    });
+    btnNext.addEventListener("click", ()=>{
+      if(idx < steps.length-1){ idx++; render(); }
+    });
+    btnPrev.addEventListener("click", ()=>{
+      if(idx > 0){ idx--; render(); }
+    });
+    btnReset.addEventListener("click", ()=>{
+      idx = 0; auto=false;
+      if(timer){ clearInterval(timer); timer=null; }
+      render();
+    });
+
+    render();
+  })();
+  </script>
+</body>
+</html>

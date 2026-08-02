@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GCD Finder Simulator — Thuật toán Euclid (Ước số chung lớn nhất)</title>
+  <meta name="description" content="Mô phỏng trực quan thuật toán Euclid tìm ƯCLN (GCD) của hai số a và b. Có từng bước chia lấy dư, log, mã giả, chế độ Step/AUTO. Bản offline."/>
+  <style>
+    :root {
+      /* Bảng màu Giao diện Sáng (Light Mode) */
+      --bg1: #f0f4f8; 
+      --bg2: #e2e8f0;
+      --card: rgba(255, 255, 255, 0.95);
+      --panel: #f8fafc;
+      --text: #0f172a; 
+      --muted: #475569; 
+      --border: #cbd5e1;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+
+      --green-600: #059669; --green-700: #047857;
+      --sky-600: #0284c7;
+      --amber: #f59e0b;
+      --rose: #e11d48;
+
+      /* trạng thái hàng hiện tại đang xét */
+      --row-active-bg: rgba(2, 132, 199, 0.08);
+      --row-active-border: #38bdf8;
+      --row-active-fg: #0369a1;
+
+      /* trạng thái kết quả cuối (ƯCLN) */
+      --row-final-bg: rgba(16, 185, 129, 0.1);
+      --row-final-border: #10b981;
+      --row-final-fg: #047857;
+    }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      min-height: 100vh;
+    }
+
+    .home-btn {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #ffffff; color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .home-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-color: var(--sky-600);
+      color: var(--sky-600);
+    }
+    .home-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    .header { text-align: center; margin-bottom: 24px; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 10px 16px; box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .title { font-weight: 900; font-size: 26px; letter-spacing: .3px; }
+    .subtitle { color: var(--muted); margin-top: 12px; font-size: 15px; line-height: 1.5; font-weight: 500; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media(min-width: 1024px) { .grid { grid-template-columns: 5fr 7fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card-h {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: 16px;
+    }
+    .card-b { padding: 18px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    
+    .badge {
+      display: inline-block; border: 1px solid var(--border);
+      padding: 4px 12px; border-radius: 10px; font-weight: 600;
+      font-size: 13px; background: #f1f5f9; color: #334155;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .text-muted { color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1.5; }
+
+    .btn {
+      border: 0; border-radius: 12px; padding: 10px 16px; font-size: 14px;
+      cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn.green { background: var(--green-600); color: #fff; }
+    .btn.green:hover { background: var(--green-700); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3); }
+    .btn.blue { background: var(--sky-600); color: #fff; }
+    .btn.blue:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+    .btn.amber { background: var(--amber); color: #1f2937; }
+    .btn.amber:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+    .btn.rose { background: var(--rose); color: #fff; }
+    .btn.rose:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3); }
+    .btn.ghost { background: #ffffff; border: 1px solid var(--border); color: #334155; }
+    .btn.ghost:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+    .slider { width: 200px; accent-color: var(--sky-600); cursor: pointer; }
+    
+    .input {
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 8px 12px; background: #ffffff; color: var(--text);
+      font-family: ui-monospace, Consolas, monospace; font-size: 14px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.03); transition: border-color 0.2s; outline: none;
+    }
+    .input:focus { border-color: var(--sky-600); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+    .input.short { width: 100px; text-align: center; font-weight: 700; font-size: 15px; }
+
+    /* Bảng Euclid steps */
+    .table-wrap { width: 100%; overflow-x: auto; margin-top: 10px; }
+    table.sim {
+      width: 100%; border-collapse: separate; border-spacing: 0 8px;
+      font-size: 14px; color: var(--text);
+    }
+    table.sim thead th {
+      text-align: left; font-weight: 700; font-size: 12px;
+      color: #64748b; padding: 4px 12px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    table.sim tbody tr td {
+      background: #ffffff; border: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      padding: 12px 10px; border-radius: 12px;
+      font-family: ui-monospace, Consolas, monospace;
+      font-weight: 600; line-height: 1.4; min-width: 60px; text-align: center;
+    }
+    tr.active-row td { background: var(--row-active-bg); border-color: var(--row-active-border); color: var(--row-active-fg); }
+    tr.final-row td { background: var(--row-final-bg); border-color: var(--row-final-border); color: var(--row-final-fg); }
+
+    .explain {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      margin-top: 16px; color: var(--text); font-size: 14.5px; line-height: 1.5; font-weight: 500;
+      white-space: pre-line;
+    }
+
+    ol.code {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 16px 16px 36px; margin: 0;
+      color: #334155; font-weight: 500;
+    }
+    ol.code li {
+      padding: 8px 10px; border-radius: 8px; margin-bottom: 4px;
+      font-family: ui-monospace, Consolas, monospace; font-size: 14px; line-height: 1.4;
+      transition: background 0.3s;
+    }
+    ol.code li.active {
+      background: #fef08a; /* Vàng nhạt */
+      box-shadow: 0 0 0 2px #facc15 inset;
+      color: #854d0e; font-weight: 700;
+    }
+
+    footer { margin-top: 24px; text-align: center; font-size: 13px; color: #64748b; font-weight: 500; }
+  </style>
+</head>
+<body>
+<a href="HOMEPAGE.HTML" class="home-btn" aria-label="Về trang chủ" title="Về trang chủ">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 10l9-7 9 7"/>
+    <path d="M5 10v10a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2V10"/>
+  </svg>
+</a>
+
+<div class="container">
+  <header class="header">
+    <div class="chip">
+      <span style="font-size: 22px;">🔁</span>
+      <div class="title">
+        GCD Finder Simulator —
+        <span style="color: var(--sky-600)">Thuật toán Euclid tìm ƯCLN(a,b)</span>
+      </div>
+    </div>
+    <div class="subtitle">
+      Mô phỏng từng bước: r = a % b, rồi a ← b, b ← r.<br/>
+      Khi b = 0 → a chính là ƯCLN. Giao diện Light Mode, chạy offline.
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="left-col">
+      <div class="card">
+        <div class="card-h">Thiết lập & điều khiển</div>
+        <div class="card-b">
+
+          <div class="row">
+            <span class="badge">Nhập số a</span>
+            <input id="inputA" type="number" class="input short" placeholder="Ví dụ: 84" />
+            <span class="badge">Nhập số b</span>
+            <input id="inputB" type="number" class="input short" placeholder="Ví dụ: 18" />
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <button class="btn ghost" id="btnRandomPair" title="Sinh ngẫu nhiên 2 số nguyên dương">Ngẫu nhiên a,b</button>
+            <button class="btn ghost" id="btnUsePair" title="Dùng a,b hiện tại và khởi tạo mô phỏng">Dùng cặp a,b</button>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <span class="badge">Tốc độ Auto</span>
+            <input id="speed" type="range" min="0.5" max="4.0" step="0.1" class="slider"/>
+            <span id="speedLabel" class="badge" style="width: 75px; text-align: center;">1.6s/bước</span>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn green" id="btnRun">Bắt đầu</button>
+            <button class="btn blue" id="btnStep">Bước tiếp ▷</button>
+            <button class="btn amber" id="btnAuto">Tự động ▷</button>
+            <button class="btn rose" id="btnReset">Làm mới</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Ghi chú / Kết quả</div>
+        <div class="card-b">
+          <div class="text-muted" style="font-size:14px;line-height:1.6">
+            - Thuật toán Euclid lặp phép chia lấy dư: r = a % b.<br/>
+            - Sau đó gán: a = b, b = r.<br/>
+            - Khi b = 0, a chính là Ước số chung lớn nhất (ƯCLN).<br/><br/>
+            - Bảng bên phải hiển thị từng vòng lặp: (a, b, a % b).<br/>
+            - Hàng đang xét sẽ được đánh dấu <span style="color: var(--sky-600); font-weight:bold;">xanh lam</span>.<br/>
+            - Hàng cuối cùng (kết quả) được đánh dấu <span style="color: var(--green-600); font-weight:bold;">xanh lục</span>.
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn ghost" id="btnExport">Xuất log .txt</button>
+          </div>
+
+          <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+          <div id="quizArea">
+            <div class="text-muted" style="font-size:14px; font-weight: 600;">
+              Dự đoán: ƯCLN(a,b) bằng bao nhiêu?
+            </div>
+            <div class="row" style="margin-top:10px">
+              <input id="quiz" type="number" class="input" placeholder="Ví dụ: 6" style="width:160px"/>
+              <button class="btn ghost" id="btnQuiz">Kiểm tra</button>
+              <span class="badge" id="expected" style="display:none;"></span>
+            </div>
+            <div id="quizResult" class="explain" style="display:none; margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="card">
+        <div class="card-h">Bảng mô phỏng Euclid</div>
+        <div class="card-b">
+          <div class="row" style="margin-bottom:12px">
+            <span class="badge">Bước # <span id="badgeStep" style="color: var(--text); font-size:14px;">0</span></span>
+            <span class="badge">a hiện tại = <span id="badgeA" style="color: var(--sky-600); font-size:15px;">?</span></span>
+            <span class="badge">b hiện tại = <span id="badgeB" style="color: var(--amber); font-size:15px;">?</span></span>
+            <span class="badge">r = a % b = <span id="badgeR" style="font-size:14px;">?</span></span>
+            <span class="badge">Kết quả = <span id="badgeGCD" style="color: var(--green-600); font-size:15px; font-weight:bold;">?</span></span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="sim">
+              <thead>
+                <tr>
+                  <th>Bước</th>
+                  <th>a</th>
+                  <th>b</th>
+                  <th>r = a % b</th>
+                  <th>Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                </tbody>
+            </table>
+          </div>
+
+          <div id="explain" class="explain"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Mã giả thuật toán Euclid (ƯCLN)</div>
+        <div class="card-b">
+          <ol id="code" class="code"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© <span id="y"></span> — Mô phỏng giáo dục, bản offline. Giao diện Light Mode.</footer>
+</div>
+
+<script>
+/*
+  =====================================================
+  GCD Finder Simulator — Euclid's Algorithm for GCD
+  Author: GPT-5 Thinking (Updated for Light Mode)
+  Date: 2025-10-27
+*/
+
+const state = {
+  a: null,
+  b: null,
+  step: 0,
+  gcd: null,
+  finished: false,
+
+  history: [], 
+  idxStep: -1,
+
+  speed: 1.6,
+  autoPlay: false,
+  timer: null,
+
+  explain: "Nhập a và b, sau đó Bắt đầu hoặc Bước tiếp.",
+  line: null, 
+  logLines: [] 
+};
+
+/* ========= DOM helper ========= */
+const $ = (id)=>document.getElementById(id);
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+
+/* ========= Core Euclid one-step ========= */
+function euclidOneStep(){
+  if(state.finished){
+    state.explain = `Thuật toán đã kết thúc. ƯCLN = ${state.gcd}.`;
+    state.line = 4; 
+    pushLog(state.explain);
+    return false;
+  }
+
+  if(state.step===0 && state.history.length===0){
+    const note0 = `Khởi tạo với (a=${state.a}, b=${state.b}).`;
+    state.history.push({
+      step: state.step,
+      a: state.a,
+      b: state.b,
+      r: "-",
+      note: note0
+    });
+    state.idxStep = state.history.length-1;
+    state.explain = note0 + "\n👉 Bấm Bước tiếp để tính r = a % b.";
+    state.line = 0;
+    pushLog(note0);
+    state.step++;
+    updateGcdEstimate();
+    return true;
+  }
+
+  if(state.b === 0){
+    state.finished = true;
+    state.gcd = state.a;
+    const doneNote = `b = 0, dừng lặp. ƯCLN = a = ${state.a}.`;
+    state.history.push({
+      step: state.step,
+      a: state.a,
+      b: state.b,
+      r: 0,
+      note: doneNote
+    });
+    state.idxStep = state.history.length-1;
+
+    state.explain = doneNote;
+    state.line = 4; 
+    pushLog(doneNote);
+    updateGcdEstimate();
+    return false;
+  }
+
+  const r = state.a % state.b;
+  const note = `Tính r = ${state.a} % ${state.b} = ${r};\nSau đó hoán đổi: a ← ${state.b}, b ← ${r}.`;
+
+  state.history.push({
+    step: state.step,
+    a: state.a,
+    b: state.b,
+    r: r,
+    note: note
+  });
+  state.idxStep = state.history.length-1;
+
+  state.explain = note;
+  state.line = 1; 
+  pushLog(note);
+
+  state.a = state.b;
+  state.b = r;
+
+  if(state.b===0){
+    state.gcd = state.a;
+  }
+
+  state.step++;
+  updateGcdEstimate();
+  return true;
+}
+
+/* ========= Auto loop ========= */
+function autoLoop(){
+  if(!state.autoPlay) return;
+  const cont = euclidOneStep();
+  renderAll();
+  if(cont){
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*700));
+  }else{
+    state.autoPlay = false;
+  }
+}
+
+/* ========= State init / reset ========= */
+function initFromInputs(){
+  const va = parseInt($("inputA").value,10);
+  const vb = parseInt($("inputB").value,10);
+
+  if(!Number.isFinite(va) || !Number.isFinite(vb)){
+    state.explain = "❌ Giá trị a hoặc b không hợp lệ. Hãy nhập số nguyên.";
+    renderAll();
+    return;
+  }
+
+  state.a = Math.abs(va);
+  state.b = Math.abs(vb);
+
+  state.step = 0;
+  state.gcd = null;
+  state.finished = false;
+  state.history = [];
+  state.idxStep = -1;
+  state.explain = `Cặp khởi tạo (a = ${state.a}, b = ${state.b}). Sẵn sàng mô phỏng.`;
+  state.line = null;
+  state.logLines = [];
+
+  pushLog(`Khởi tạo với a=${state.a}, b=${state.b}`);
+  updateGcdEstimate();
+  $("quizResult").style.display="none"; // Ẩn kết quả quiz cũ
+  renderAll();
+}
+
+function resetAll(){
+  state.autoPlay = false;
+  clearTimeout(state.timer);
+
+  state.step = 0;
+  state.gcd = null;
+  state.finished = false;
+  state.history = [];
+  state.idxStep = -1;
+  state.explain = "Đã làm mới. Nhập a, b rồi Bắt đầu hoặc Bước tiếp.";
+  state.line = null;
+  state.logLines = [];
+  $("quiz").value = "";
+  $("quizResult").style.display="none";
+  updateGcdEstimate();
+  renderAll();
+}
+
+/* ========= Ghi log để export ========= */
+function pushLog(msg){
+  state.logLines.push(msg);
+}
+function exportLog(){
+  const blob = new Blob([state.logLines.join("\n")], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const now = new Date();
+  const stamp = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2) + ("0"+now.getSeconds()).slice(-2);
+
+  a.href = url;
+  a.download = "log_gcd_euclid_" + stamp + ".txt";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+/* ========= Quiz logic ========= */
+function updateGcdEstimate(){
+  if(state.gcd!=null){
+    $("expected").style.display = "inline-block";
+    $("expected").textContent = "Gợi ý: ƯCLN = " + state.gcd;
+  }else{
+    $("expected").style.display = "none";
+  }
+}
+
+function checkQuiz(){
+  const resEl = $("quizResult");
+
+  if(state.a===null || state.b===null || state.history.length===0){
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.innerHTML="⚠️ Hãy nhập a, b và bắt đầu mô phỏng trước.";
+    return;
+  }
+
+  const guess = parseInt($("quiz").value,10);
+  if(!Number.isFinite(guess)){
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.innerHTML="⚠️ Hãy nhập một số nguyên dự đoán.";
+    return;
+  }
+
+  if(state.gcd!=null){
+    if(guess===state.gcd){
+      resEl.style.display="block";
+      resEl.style.color="var(--green-700)";
+      resEl.innerHTML="🎉 <strong>Chính xác!</strong> Bạn đã dự đoán đúng ƯCLN.";
+    } else {
+      resEl.style.display="block";
+      resEl.style.color="var(--rose)";
+      resEl.innerHTML=`❌ <strong>Chưa đúng.</strong> ƯCLN thực tế là ${state.gcd}.`;
+    }
+  } else {
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.innerHTML="⏳ Thuật toán chưa kết thúc (vẫn đang tính). Bạn có thể chạy thêm để kiểm tra kết quả cuối cùng.";
+  }
+}
+
+/* ========= RENDER CODE (mã giả Euclid) ========= */
+const codeLines = [
+  "while b ≠ 0:",
+  "    r ← a mod b",
+  "    a ← b",
+  "    b ← r",
+  "return a   // a lúc này là ƯCLN(a,b)"
+];
+
+function renderCode(){
+  const list = $("code");
+  list.innerHTML = "";
+  codeLines.forEach((ln,idx)=>{
+    const li=document.createElement("li");
+    li.textContent=(idx+1)+". "+ln;
+    if(state.line===idx) li.classList.add("active");
+    list.appendChild(li);
+  });
+}
+
+/* ========= RENDER TABLE ========= */
+function renderTable(){
+  const tbody = $("tableBody");
+  tbody.innerHTML = "";
+
+  for(let i=0;i<state.history.length;i++){
+    const row = state.history[i];
+    const tr = document.createElement("tr");
+
+    if(i===state.idxStep && !state.finished){
+      tr.className = "active-row";
+    }
+    if(i===state.history.length-1 && state.finished){
+      tr.className = "final-row";
+    }
+
+    const tdStep=document.createElement("td");
+    const tdA=document.createElement("td");
+    const tdB=document.createElement("td");
+    const tdR=document.createElement("td");
+    const tdNote=document.createElement("td");
+
+    tdStep.textContent=row.step;
+    tdA.textContent=row.a;
+    tdB.textContent=row.b;
+    tdR.textContent=row.r;
+    tdNote.textContent=row.note;
+    tdNote.style.textAlign="left";
+
+    tr.appendChild(tdStep);
+    tr.appendChild(tdA);
+    tr.appendChild(tdB);
+    tr.appendChild(tdR);
+    tr.appendChild(tdNote);
+
+    tbody.appendChild(tr);
+  }
+}
+
+/* ========= RENDER BADGES + EXPLAIN ========= */
+function renderStatusPanel(){
+  const cur = state.history[state.idxStep] || null;
+  $("badgeStep").textContent = cur ? cur.step : state.step;
+  $("badgeA").textContent    = state.a===null? "?" : state.a;
+  $("badgeB").textContent    = state.b===null? "?" : state.b;
+
+  const rShow = (cur && cur.r!==undefined) ? cur.r : "?";
+  $("badgeR").textContent    = rShow;
+
+  $("badgeGCD").textContent  = (state.gcd==null? "?" : state.gcd);
+
+  $("speed").value = state.speed;
+  $("speedLabel").textContent = state.speed.toFixed(1) + "s";
+
+  $("explain").innerHTML = state.explain ? state.explain.replace(/\n/g, '<br/>') : "";
+}
+
+/* ========= RENDER TỔNG ========= */
+function renderAll(){
+  renderStatusPanel();
+  renderTable();
+  renderCode();
+  $("y").textContent = new Date().getFullYear();
+}
+
+/* ========= EVENT WIRING ========= */
+function wire(){
+  $("btnRandomPair").addEventListener("click", ()=>{
+    const a = randInt(20, 200);
+    const b = randInt(10, 150);
+    $("inputA").value = a;
+    $("inputB").value = b;
+  });
+
+  $("btnUsePair").addEventListener("click", ()=>{
+    initFromInputs();
+  });
+
+  $("speed").addEventListener("input", e=>{
+    state.speed = Number(e.target.value);
+    renderAll();
+  });
+
+  $("btnRun").addEventListener("click", ()=>{
+    if(state.a===null || state.b===null){
+      initFromInputs();
+    }
+    euclidOneStep();
+    renderAll();
+  });
+
+  $("btnStep").addEventListener("click", ()=>{
+    state.autoPlay=false;
+    clearTimeout(state.timer);
+    if(state.a===null || state.b===null){
+      initFromInputs();
+    }
+    euclidOneStep();
+    renderAll();
+  });
+
+  $("btnAuto").addEventListener("click", ()=>{
+    state.autoPlay=true;
+    clearTimeout(state.timer);
+    if(state.a===null || state.b===null){
+      initFromInputs();
+    }
+    euclidOneStep();
+    renderAll();
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*400));
+  });
+
+  $("btnReset").addEventListener("click", ()=>{
+    state.autoPlay=false;
+    clearTimeout(state.timer);
+    resetAll();
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    exportLog();
+  });
+
+  $("btnQuiz").addEventListener("click", ()=>{
+    $("quizResult").style.display="block";
+    checkQuiz();
+  });
+}
+
+/* ========= INIT ========= */
+(function init(){
+  const a0 = randInt(30,150);
+  const b0 = randInt(10,80);
+  $("inputA").value = a0;
+  $("inputB").value = b0;
+  state.speed = 1.6;
+  resetAll();
+  wire();
+  renderAll();
+})();
+</script>
+</body>
+</html>

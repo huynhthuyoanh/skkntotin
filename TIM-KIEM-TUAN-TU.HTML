@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linear Search Simulator — Bản Offline</title>
+  <meta name="description" content="Mô phỏng trực quan thuật toán tìm kiếm tuần tự (linear search) với dải phạm vi, mờ ngoài phạm vi, chế độ Sentinel. Bản offline, giao diện Light Mode."/>
+  <style>
+    :root {
+      /* Bảng màu Giao diện Sáng (Light Mode) */
+      --bg1: #f0f4f8; 
+      --bg2: #e2e8f0;
+      --card: rgba(255, 255, 255, 0.95);
+      --panel: #f8fafc;
+      --border: #cbd5e1;
+      --text: #0f172a; 
+      --text-dim: #475569; 
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+
+      --accent: #0284c7;  /* Xanh lam */
+      --accent2: #059669; /* Xanh lục */
+      --amber: #d97706;   /* Vàng cam */
+      --rose: #e11d48;    /* Đỏ */
+    }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      min-height: 100vh;
+    }
+
+    .home-btn {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #ffffff; color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .home-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .home-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    .header { text-align: center; margin-bottom: 24px; }
+    
+    .chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 10px 16px; box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .title { font-weight: 900; font-size: 26px; letter-spacing: .3px; }
+    .subtitle { color: var(--text-dim); margin-top: 10px; font-weight: 500; font-size: 14.5px; line-height: 1.5; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media(min-width: 1024px) { .grid { grid-template-columns: 5fr 7fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card-h {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: 16px;
+    }
+    .card-b { padding: 18px; }
+    
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+    
+    .badge {
+      display: inline-block; border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 8px; font-weight: 600;
+      font-size: 13px; background: #f1f5f9; color: var(--text-dim);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .text-muted { color: var(--text-dim); font-size: 13.5px; font-weight: 500; line-height: 1.5; }
+
+    .btn {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 14px; font-size: 14px; background: #ffffff; color: #334155;
+      cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; transform: none !important; }
+    .btn.green { background: var(--accent2); color: #fff; border-color: transparent; }
+    .btn.green:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3); }
+    .btn.blue { background: var(--accent); color: #fff; border-color: transparent; }
+    .btn.blue:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+    .btn.amber { background: var(--amber); color: #fff; border-color: transparent; }
+    .btn.amber:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3); }
+    .btn.rose { background: var(--rose); color: #fff; border-color: transparent; }
+    .btn.rose:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3); }
+    .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+    .btn.ghost:hover { background: #f1f5f9; border-color: #94a3b8; color: var(--text); }
+
+    .slider { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .input {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 9px 12px; background: #ffffff; color: var(--text);
+      font-family: ui-monospace, Consolas, monospace; font-size: 14px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.03); transition: border-color 0.2s; outline: none;
+    }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+    
+    .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+    .grid8 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+    @media(min-width: 720px) { .grid8 { grid-template-columns: repeat(8, 1fr); } }
+
+    .cell {
+      position: relative; height: 64px; border-radius: 14px;
+      border: 1px solid var(--border); display: flex; align-items: center;
+      justify-content: center; font-weight: 800; font-size: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03); background: #ffffff;
+      color: var(--text); transition: .18s;
+    }
+    .cell.found { background: #dcfce7; color: #166534; border-color: #86efac; box-shadow: 0 0 0 4px rgba(34,197,94,0.25); z-index: 2;}
+    .cell.checking { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; box-shadow: 0 0 0 4px rgba(56,189,248,0.3); z-index: 2;}
+    .cell.checked { background: #f1f5f9; color: #94a3b8; border-color: #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);}
+    
+    .idx {
+      position: absolute; right: -8px; top: -8px;
+      background: #ffffff; color: var(--text-dim); border: 1px solid var(--border);
+      border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 800;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08); z-index: 3;
+    }
+    
+    .in-range { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.4) inset; background: rgba(245, 158, 11, 0.05); }
+    .out-range { opacity: 0.45; filter: grayscale(80%) blur(1px); }
+
+    .explain {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      margin-top: 16px; color: var(--text); font-size: 14.5px; font-weight: 500; min-height: 48px;
+    }
+    
+    ol.code {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 16px 16px 36px; list-style-type: decimal; margin: 0;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    ol.code li {
+      padding: 8px 10px; border-radius: 8px;
+      font-family: ui-monospace, Consolas, monospace; font-size: 13.5px; font-weight: 500;
+      transition: background 0.3s; margin-bottom: 4px; color: #334155;
+    }
+    ol.code li.active {
+      background: #fef08a; /* Vàng nhạt */
+      box-shadow: 0 0 0 2px #facc15 inset;
+      color: #854d0e; font-weight: 700;
+    }
+
+    footer { margin-top: 24px; text-align: center; font-size: 13px; color: var(--text-dim); font-weight: 500; }
+  </style>
+</head>
+<body>
+  <a href="HOMEPAGE.HTML" class="home-btn" aria-label="Về trang chủ" title="Về trang chủ">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 10l9-7 9 7"/>
+    <path d="M5 10v10a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2V10"/>
+  </svg>
+</a>
+  <div class="container">
+    <header class="header">
+      <div class="chip">
+        <span style="font-size: 22px;">✨</span>
+        <div class="title">Linear Search Simulator — <span style="color: var(--accent)">Mô phỏng Tìm kiếm Tuần tự</span></div>
+      </div>
+      <div class="subtitle">Mô phỏng trực quan thuật toán với dải phạm vi, mờ ngoài phạm vi, và chế độ lính canh.</div>
+    </header>
+
+    <div class="grid">
+      <div class="left-col">
+        <div class="card">
+          <div class="card-h">Thiết lập mảng & mục tiêu</div>
+          <div class="card-b">
+            <div class="row">
+              <span class="badge" style="width: 120px; text-align: center;">Kích thước (n)</span>
+              <input id="n" type="range" min="5" max="15" step="1" class="slider" style="flex:1;"/>
+              <span id="nLabel" class="badge" style="width: 40px; text-align: center;">8</span>
+            </div>
+
+            <div class="row" style="margin-top:12px">
+              <button class="btn ghost" id="btnMakeDistinct" style="flex:1;">Tạo mảng (không trùng)</button>
+              <button class="btn ghost" id="btnMakeMaybeDup" style="flex:1;">Tạo mảng (có thể trùng)</button>
+            </div>
+
+            <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+            <div class="row">
+              <span class="badge" style="width: 120px; text-align: center;">Mục tiêu x</span>
+              <input id="x" class="input" placeholder="Nhập số 0–99" style="flex:1; width: 80px; text-align: center; font-weight: 700;"/>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn ghost" id="btnPickIn" style="flex:1;">Chọn x có trong mảng</button>
+              <button class="btn ghost" id="btnPickRand" style="flex:1;">x ngẫu nhiên</button>
+            </div>
+
+            <div class="row" style="margin-top:16px; background: var(--panel); padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+              <label class="switch">
+                <input type="checkbox" id="sentinel" style="width: 18px; height: 18px; accent-color: var(--accent);"/> 
+                <span>Bật biến thể <b>Sentinel</b> (đặt lính canh cuối mảng)</span>
+              </label>
+            </div>
+
+            <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+            <div class="row">
+              <span class="badge" style="width: 120px; text-align: center;">Tốc độ Auto</span>
+              <input id="speed" type="range" min="0.5" max="4.0" step="0.1" class="slider" style="flex:1;"/>
+              <span id="speedLabel" class="badge" style="width: 80px; text-align: center;">1.6s/bước</span>
+            </div>
+
+            <div class="row" style="margin-top:16px">
+              <button class="btn green" id="btnRun" style="flex:1;">Bắt đầu</button>
+              <button class="btn blue" id="btnStep" style="flex:1;">Bước tiếp ▷</button>
+            </div>
+            <div class="row" style="margin-top:8px">
+              <button class="btn amber" id="btnAuto" style="flex:1;">Chạy Tự động ▷</button>
+              <button class="btn rose" id="btnReset" style="flex:1;">Làm mới</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-h">Đố vui — Dự đoán số phép so sánh</div>
+          <div class="card-b">
+            <div class="text-muted">Mô phỏng số lần so sánh theo mảng & x hiện tại (kể cả khi không tìm thấy).</div>
+            <div class="row" style="margin-top:12px">
+              <input id="quiz" type="number" class="input" placeholder="Ví dụ: 5" style="width:120px; text-align: center;"/>
+              <button class="btn ghost" id="btnQuiz">Kiểm tra</button>
+              <span class="badge" id="expected"></span>
+            </div>
+            <div id="quizResult" class="explain" style="display:none;margin-top:12px; padding: 10px; font-weight: 600;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="card">
+          <div class="card-h">Bảng mô phỏng</div>
+          <div class="card-b">
+            <div class="row" style="margin-bottom:12px">
+              <span class="badge" id="badgeX">x = ?</span>
+              <span class="badge" id="badgeI">i = 0</span>
+              <span class="badge" id="badgeC">so sánh = 0</span>
+              <span class="badge" id="badgeMode">Chuẩn</span>
+              <span class="badge" id="badgeFound" style="display:none; background: #dcfce7; color: #166534; border-color: #86efac;">TÌM THẤY</span>
+            </div>
+            
+            <div id="grid" class="grid8"></div>
+            
+            <div id="explain" class="explain"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-h">Mã giả thuật toán</div>
+          <div class="card-b">
+            <ol id="code" class="code"></ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>© <span id="y"></span> — Mô phỏng giáo dục, bản offline. Giao diện Light Mode.</footer>
+  </div>
+
+  <script>
+    const state = {
+      n: 8,
+      arr: [], 
+      target: "",
+      i: 0,
+      foundIndex: null,
+      comps: 0,
+      autoPlay: false,
+      speed: 1.6,
+      timer: null,
+      explain: "Nhập x và bấm Bắt đầu hoặc Bước tiếp.",
+      line: 0,
+      sentinel: false,
+      savedLast: null
+    };
+
+    const codeLines = [
+      "i ← 0",
+      "Trong khi i < n làm",
+      "    Nếu A[i] = x thì",
+      "        Trả về i (tìm thấy)",
+      "    Ngược lại: i ← i + 1",
+      "Kết thúc: Trả về -1 (không thấy)"
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+    function createArray(n, distinct){
+      const used = new Set();
+      const out = [];
+      for(let i=0;i<n;i++){
+        let v = randInt(0,99);
+        if(distinct){
+          while(used.has(v)) v = randInt(0,99);
+          used.add(v);
+        }
+        out.push({id:i,value:v,state:"idle"});
+      }
+      return out;
+    }
+
+    function resetStates(newArr=null){
+      state.arr = (newArr ?? state.arr).map((c,i)=>({id:i,value:c.value,state:"idle"}));
+      state.i = 0;
+      state.foundIndex = null;
+      state.comps = 0;
+      state.explain = "Nhập x và bấm Bắt đầu hoặc Bước tiếp.";
+      state.line = 0;
+      render();
+    }
+
+    function regenerate(distinct=true){
+      state.arr = createArray(state.n, distinct);
+      state.target = "";
+      resetStates();
+    }
+
+    function pickTarget(ensureExists){
+      let x;
+      if(ensureExists && state.arr.length>0){
+        const k = randInt(0, state.arr.length-1);
+        x = state.arr[k].value;
+      } else x = randInt(0, 99);
+      state.target = String(x);
+      state.explain = "Mục tiêu x = " + x + ". Hãy chạy mô phỏng.";
+      render();
+    }
+
+    function expectedComparisons(){
+      if(state.target==="") return null;
+      const x = Number(state.target);
+      const idx = state.arr.findIndex(c=>c.value===x);
+      return idx === -1 ? state.arr.length : idx + 1;
+    }
+
+    function prepareSentinel(){
+      if(state.target==="" || state.arr.length===0) return false;
+      const x = Number(state.target);
+      state.savedLast = state.arr[state.arr.length-1].value;
+      state.arr[state.arr.length-1].value = x; 
+      for(let i=0;i<state.arr.length;i++) state.arr[i].state = "idle";
+      state.i = 0; state.comps = 0; state.foundIndex = null;
+      state.explain = "Đã đặt lính canh (sentinel) = x ở cuối mảng.";
+      state.line = 0;
+      render();
+      return true;
+    }
+    
+    function restoreSentinel(){
+      if(state.savedLast===null) return;
+      state.arr[state.arr.length-1].value = state.savedLast;
+      state.savedLast = null;
+    }
+
+    function stepStandard(){
+      if(state.foundIndex!==null) return;
+      if(state.i >= state.arr.length){
+        state.explain = "Hết mảng mà không tìm thấy x. Trả về -1.";
+        state.line = 5;
+        render(); return;
+      }
+      state.line = 1;
+      for(let k=0;k<state.arr.length;k++) if(state.arr[k].state==="checking") state.arr[k].state="checked";
+      state.arr[state.i].state="checking";
+      render();
+      
+      setTimeout(()=>{
+        state.comps++;
+        const val = state.arr[state.i].value;
+        state.line = 2;
+        if(state.target!=="" && val===Number(state.target)){
+          state.arr[state.i].state = "found";
+          state.foundIndex = state.i;
+          state.explain = `A[${state.i}] = ${val} = x → TÌM THẤY tại vị trí ${state.i}.`;
+          state.line = 3;
+        }else{
+          state.arr[state.i].state = "checked";
+          state.explain = `A[${state.i}] = ${val} ≠ x → i ← i + 1.`;
+          state.i = state.i + 1;
+          state.line = 4;
+        }
+        render();
+        if(state.autoPlay && state.foundIndex===null && state.i <= state.arr.length){
+          clearTimeout(state.timer);
+          state.timer = setTimeout(step, Math.max(100, state.speed*700));
+        }
+      }, Math.max(300, state.speed*600));
+    }
+
+    function stepSentinel(){
+      if(state.foundIndex!==null) return;
+      if(state.target==="") return;
+      const x = Number(state.target);
+      for(let k=0;k<state.arr.length;k++) if(state.arr[k].state==="checking") state.arr[k].state="checked";
+      
+      if(state.i >= state.arr.length){
+        restoreSentinel();
+        state.explain = "Không tìm thấy x (loại bỏ trường hợp lính canh). Trả về -1.";
+        state.line = 5;
+        render(); return;
+      }
+      
+      state.arr[state.i].state="checking";
+      render();
+      
+      setTimeout(()=>{
+        state.comps++;
+        if(state.arr[state.i].value===x){
+          if(state.i === state.arr.length-1){
+            restoreSentinel();
+            const real = state.arr.findIndex(c=>c.value===x);
+            if(real!==-1){
+              state.arr[real].state="found";
+              state.foundIndex = real;
+              state.explain = `Gặp lính canh → khôi phục và xác nhận: x tại vị trí ${real}.`;
+              state.line = 3;
+            }else{
+              state.explain = "Gặp lính canh ở cuối và không có x thật trong mảng → -1.";
+              state.line = 5;
+            }
+          } else {
+            state.arr[state.i].state="found";
+            state.foundIndex = state.i;
+            restoreSentinel();
+            state.explain = `A[${state.i}] = x → TÌM THẤY tại vị trí ${state.i}.`;
+            state.line = 3;
+          }
+        } else {
+          state.arr[state.i].state="checked";
+          state.i = state.i + 1;
+          state.explain = `A[${state.i-1}] ≠ x → i ← i + 1.`;
+          state.line = 4;
+        }
+        render();
+        if(state.autoPlay && state.foundIndex===null && state.i <= state.arr.length){
+          clearTimeout(state.timer);
+          state.timer = setTimeout(step, Math.max(100, state.speed*700));
+        }
+      }, Math.max(300, state.speed*600));
+    }
+
+    function step(){
+      if(state.sentinel) stepSentinel(); else stepStandard();
+    }
+
+    function render(){
+      $("n").value = state.n; $("nLabel").textContent = state.n;
+      $("x").value = state.target;
+      $("speed").value = state.speed; $("speedLabel").textContent = state.speed.toFixed(1)+"s/bước";
+      $("badgeX").textContent = "x = " + (state.target==="" ? "?" : state.target);
+      $("badgeI").textContent = "i = " + state.i;
+      $("badgeC").textContent = "so sánh = " + state.comps;
+      $("badgeMode").textContent = state.sentinel ? "Sentinel" : "Chuẩn";
+      $("badgeFound").style.display = (state.foundIndex!==null) ? "inline-block" : "none";
+      $("sentinel").checked = !!state.sentinel;
+
+      const grid = $("grid"); grid.innerHTML = "";
+      for(let idx=0; idx<state.arr.length; idx++){
+        const cell = state.arr[idx];
+        const inRange = (state.foundIndex!==null) ? (idx===state.foundIndex) : (idx >= state.i);
+        let cls = "cell ";
+        if(cell.state==="found") cls += " found ";
+        if(cell.state==="checking") cls += " checking ";
+        if(cell.state==="checked") cls += " checked ";
+        if(inRange) cls += " in-range "; else cls += " out-range ";
+        
+        const d = document.createElement("div");
+        d.className = cls.trim();
+        d.innerHTML = `<span class="idx">${idx}</span>${cell.value}`;
+        grid.appendChild(d);
+      }
+
+      const code = $("code"); code.innerHTML="";
+      codeLines.forEach((ln,i)=>{
+        const li=document.createElement("li"); 
+        li.textContent = (i+1)+". "+ln; 
+        if(state.line===i) li.classList.add("active"); 
+        code.appendChild(li);
+      });
+
+      const finishText = (state.foundIndex!==null)
+        ? `✔️ Tìm thấy x tại i = ${state.foundIndex}. Số phép so sánh: ${state.comps}.`
+        : (state.i >= state.arr.length ? `❌ Không tìm thấy x trong mảng. Số phép so sánh: ${state.comps}.` : "");
+      $("explain").textContent = finishText || state.explain || "";
+
+      const exp = expectedComparisons();
+      $("expected").textContent = (exp==null) ? "" : ("Gợi ý: " + exp + " phép so sánh");
+    }
+
+    function wire(){
+      $("n").addEventListener("input", e=>{ state.n = Number(e.target.value); regenerate(true); });
+      $("btnMakeDistinct").addEventListener("click", ()=>regenerate(true));
+      $("btnMakeMaybeDup").addEventListener("click", ()=>regenerate(false));
+
+      $("x").addEventListener("input", e=>{
+        const v=e.target.value;
+        if(v==="" || /^\d{1,2}$/.test(v)) state.target=v;
+        render();
+      });
+      $("btnPickIn").addEventListener("click", ()=>pickTarget(true));
+      $("btnPickRand").addEventListener("click", ()=>pickTarget(false));
+
+      $("sentinel").addEventListener("change", e=>{ state.sentinel = e.target.checked; render(); });
+
+      $("speed").addEventListener("input", e=>{ state.speed = Number(e.target.value); render(); });
+
+      $("btnRun").addEventListener("click", ()=>{
+        if(state.target===""){ state.explain="Hãy nhập hoặc chọn x trước khi chạy."; render(); return; }
+        resetStates();
+        if(state.sentinel){
+          const ok = prepareSentinel();
+          if(!ok) return;
+        }
+        state.autoPlay = false;
+        $("badgeFound").style.display = "none";
+        state.explain = "Bấm Bước tiếp để chạy từng bước, hoặc dùng Tự động.";
+        render();
+      });
+
+      $("btnAuto").addEventListener("click", ()=>{
+        if(state.target===""){ state.explain="Hãy nhập hoặc chọn x trước khi chạy."; render(); return; }
+        resetStates();
+        if(state.sentinel){
+          const ok = prepareSentinel();
+          if(!ok) return;
+        }
+        state.autoPlay = true;
+        state.explain = "Đang chạy mô phỏng tự động…";
+        render();
+        clearTimeout(state.timer);
+        state.timer = setTimeout(function loop(){ step(); if(state.autoPlay && state.foundIndex===null && state.i <= state.arr.length){ state.timer = setTimeout(loop, Math.max(100, state.speed*700)); } }, Math.max(100, state.speed*400));
+      });
+
+      $("btnStep").addEventListener("click", ()=>{ state.autoPlay=false; clearTimeout(state.timer); step(); });
+      $("btnReset").addEventListener("click", ()=> resetStates());
+
+      $("btnQuiz").addEventListener("click", ()=>{
+        const exp = expectedComparisons();
+        const resEl = $("quizResult");
+        if(exp==null){ resEl.style.display="block"; resEl.style.color="var(--text)"; resEl.textContent="⚠️ Hãy nhập hoặc chọn x trước."; return; }
+        const guess = Number($("quiz").value);
+        if(!Number.isFinite(guess)){ resEl.style.display="block"; resEl.style.color="var(--text)"; resEl.textContent="⚠️ Hãy nhập một số nguyên."; return; }
+        if(guess===exp){ 
+          resEl.style.display="block"; resEl.style.color="var(--accent2)"; 
+          resEl.innerHTML="🎉 <strong>Chính xác!</strong> Phán đoán của bạn rất chuẩn."; 
+        } else { 
+          resEl.style.display="block"; resEl.style.color="var(--rose)"; 
+          resEl.innerHTML=`❌ <strong>Chưa đúng.</strong> Đáp án mô phỏng thực tế là: ${exp} phép so sánh.`; 
+        }
+      });
+    }
+
+    (function init(){
+      state.arr = createArray(state.n, true);
+      resetStates();
+      wire();
+      document.getElementById("y").textContent = new Date().getFullYear();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sieve of Eratosthenes Simulator — Sàng Eratosthenes</title>
+  <meta name="description" content="Mô phỏng sàng Eratosthenes: từng bước gạch bội số để liệt kê số nguyên tố ≤ N. Có Step, Auto, log, quiz. Offline, light UI."/>
+  <style>
+    :root {
+      /* Bảng màu Giao diện Sáng (Light Mode) */
+      --bg1: #f0f4f8; /* Xám nhạt pha xanh */
+      --bg2: #e2e8f0;
+      --card: rgba(255, 255, 255, 0.95); /* Trắng gần như đặc, hơi trong suốt nhẹ */
+      --panel: #f8fafc;
+      --text: #0f172a; /* Slate 900 - Đen chữ chuẩn */
+      --muted: #475569; /* Slate 600 - Xám chữ phụ */
+      --border: #cbd5e1; /* Xám viền */
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03); /* Bóng đổ mềm mại */
+
+      --green-600: #059669; 
+      --green-700: #047857;
+      --sky-600: #0284c7;
+      --amber: #f59e0b;
+      --rose: #e11d48;
+
+      /* trạng thái số nguyên tố đã chốt */
+      --prime-bg: rgba(16, 185, 129, 0.1);
+      --prime-border: #10b981;
+      --prime-fg: #047857;
+
+      /* trạng thái số p hiện tại đang xử lý */
+      --current-bg: rgba(2, 132, 199, 0.08);
+      --current-border: #38bdf8;
+      --current-fg: #0369a1;
+
+      /* trạng thái số bị gạch ở bước hiện tại */
+      --cross-bg: rgba(239, 68, 68, 0.08);
+      --cross-border: #ef4444;
+      --cross-fg: #b91c1c;
+
+      /* trạng thái số đã bị gạch từ trước (mờ đi) */
+      --faded-bg: #f1f5f9;
+      --faded-border: #cbd5e1;
+      --faded-fg: #94a3b8;
+    }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+      min-height: 100vh;
+    }
+
+    .home-btn {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #ffffff; color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .home-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-color: var(--sky-600);
+      color: var(--sky-600);
+    }
+    .home-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .container { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    .header { text-align: center; margin-bottom: 24px; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 10px 16px; box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .title { font-weight: 900; font-size: 26px; letter-spacing: .3px; }
+    .subtitle { color: var(--muted); margin-top: 12px; font-size: 15px; line-height: 1.5; font-weight: 500; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media(min-width: 1024px) { .grid { grid-template-columns: 5fr 7fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card-h {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 18px; border-bottom: 1px solid var(--border); 
+      font-weight: 800; font-size: 16px; color: var(--text);
+    }
+    .card-b { padding: 18px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    
+    .badge {
+      display: inline-block; border: 1px solid var(--border);
+      padding: 4px 12px; border-radius: 10px;
+      font-size: 13px; background: #f1f5f9; color: #334155; font-weight: 600;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .text-muted { color: var(--muted); }
+
+    .btn {
+      border: 0; border-radius: 12px;
+      padding: 10px 16px; font-size: 14px;
+      cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn.green { background: var(--green-600); color: #fff; }
+    .btn.green:hover { background: var(--green-700); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3); }
+    
+    .btn.blue { background: var(--sky-600); color: #fff; }
+    .btn.blue:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+    
+    .btn.amber { background: var(--amber); color: #1f2937; }
+    .btn.amber:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+    
+    .btn.rose { background: var(--rose); color: #fff; }
+    .btn.rose:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3); }
+    
+    .btn.ghost { background: #ffffff; border: 1px solid var(--border); color: #334155; }
+    .btn.ghost:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+    .slider { width: 200px; accent-color: var(--sky-600); cursor: pointer; }
+    
+    .input {
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 8px 12px; background: #ffffff; color: var(--text);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+      transition: border-color 0.2s;
+    }
+    .input:focus { outline: none; border-color: var(--sky-600); box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
+    .input.short { width: 120px; text-align: center; font-weight: 700; font-size: 15px; }
+
+    /* Lưới số từ 2..N */
+    .gridNums {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+      gap: 10px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    .numCell {
+      position: relative;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      min-height: 52px;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      color: var(--text);
+      transition: 0.15s;
+      text-align: center;
+      line-height: 1.2;
+      padding: 6px;
+      word-break: break-word;
+    }
+
+    /* Các trạng thái của ô số */
+    .numCell.primeNow {
+      background: var(--prime-bg); border-color: var(--prime-border); color: var(--prime-fg);
+    }
+    .numCell.currentP {
+      background: var(--current-bg); border-color: var(--current-border); color: var(--current-fg);
+    }
+    .numCell.crossNow {
+      background: var(--cross-bg); border-color: var(--cross-border); color: var(--cross-fg); text-decoration: line-through;
+    }
+    .numCell.crossed {
+      background: var(--faded-bg); border-color: var(--faded-border); color: var(--faded-fg); text-decoration: line-through;
+    }
+
+    .explain {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+      margin-top: 16px; color: var(--text); font-size: 14.5px; line-height: 1.5; font-weight: 500;
+      white-space: pre-line;
+    }
+
+    ol.code {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 16px 16px 36px; margin: 0;
+      color: #334155; font-weight: 500;
+    }
+    ol.code li {
+      padding: 8px 10px; border-radius: 8px; margin-bottom: 4px;
+      font-family: ui-monospace, Consolas, monospace; font-size: 14px; line-height: 1.4;
+      transition: background 0.3s;
+    }
+    ol.code li.active {
+      background: #fef08a; /* Vàng nhạt */
+      box-shadow: 0 0 0 2px #facc15 inset;
+      color: #854d0e; /* Chữ vàng nâu đậm */
+      font-weight: 700;
+    }
+
+    footer { margin-top: 24px; text-align: center; font-size: 13px; color: #64748b; font-weight: 500; }
+  </style>
+</head>
+<body>
+<a href="HOMEPAGE.HTML" class="home-btn" aria-label="Về trang chủ" title="Về trang chủ">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 10l9-7 9 7"/>
+    <path d="M5 10v10a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2V10"/>
+  </svg>
+</a>
+
+<div class="container">
+  <header class="header">
+    <div class="chip">
+      <span style="font-size: 22px;">🧮</span>
+      <div class="title">
+        Sieve of Eratosthenes Simulator —
+        <span style="color: var(--sky-600)">Sàng Eratosthenes</span>
+      </div>
+    </div>
+    <div class="subtitle">
+      Liệt kê số nguyên tố ≤ N bằng cách gạch dần các bội số.<br/>
+      Bước lặp: chọn p chưa bị gạch, đánh dấu p là nguyên tố; gạch tất cả bội số của p lớn hơn p.<br/>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="left-col">
+      <div class="card">
+        <div class="card-h">Thiết lập & điều khiển</div>
+        <div class="card-b">
+
+          <div class="row">
+            <span class="badge">Giới hạn N</span>
+            <input id="inputN" type="number" class="input short" placeholder="ví dụ: 50" />
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <button class="btn ghost" id="btnRandomN" title="Sinh N ngẫu nhiên (10..120)">Ngẫu nhiên N</button>
+            <button class="btn ghost" id="btnUseN" title="Dùng N này để khởi tạo dãy 2..N">Dùng N này</button>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <span class="badge">Tốc độ Auto</span>
+            <input id="speed" type="range" min="0.5" max="4.0" step="0.1" class="slider"/>
+            <span id="speedLabel" class="badge" style="width: 75px; text-align: center;">1.6s/bước</span>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn green" id="btnRun">Bắt đầu</button>
+            <button class="btn blue" id="btnStep">Bước tiếp ▷</button>
+            <button class="btn amber" id="btnAuto">Tự động ▷</button>
+            <button class="btn rose" id="btnReset">Làm mới</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Ghi chú / Kết quả</div>
+        <div class="card-b">
+          <div class="text-muted" style="font-size:14px;line-height:1.6">
+            - Các ô thể hiện số từ <strong>2 tới N</strong>.<br/>
+            - Màu <span style="color: var(--sky-600); font-weight:bold;">xanh lam</span>: số <strong>p</strong> đang xét hiện tại.<br/>
+            - Màu <span style="color: var(--rose); font-weight:bold;">đỏ (gạch)</span>: bội số của <strong>p</strong> vừa bị loại bỏ (hợp số).<br/>
+            - Màu xám: số đã bị loại bỏ ở những bước trước đó.<br/>
+            - Màu <span style="color: var(--green-600); font-weight:bold;">xanh lục</span>: số được xác nhận là nguyên tố.<br/><br/>
+
+            - <strong>Bước tiếp (Step):</strong> thực hiện một hành động (chọn p tiếp theo hoặc gạch 1 bội số).<br/>
+            - <strong>Tự động (Auto):</strong> chạy liên tục theo tốc độ đã chọn.<br/>
+            - Khi hoàn tất, tất cả ô xanh lục là các số nguyên tố ≤ N.
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn ghost" id="btnExport">Xuất log .txt</button>
+          </div>
+
+          <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+          <div id="quizArea">
+            <div class="text-muted" style="font-size:14px; font-weight: 600;">
+              Dự đoán: Có bao nhiêu số nguyên tố ≤ N ?
+            </div>
+            <div class="row" style="margin-top:10px">
+              <input id="quiz" type="number" class="input short" placeholder="ví dụ: 15"/>
+              <button class="btn ghost" id="btnQuiz">Kiểm tra</button>
+              <span class="badge" id="expected" style="display:none;"></span>
+            </div>
+            <div id="quizResult" class="explain" style="display:none; margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="card">
+        <div class="card-h">Lưới sàng</div>
+        <div class="card-b">
+          <div class="row" style="margin-bottom:12px">
+            <span class="badge">Bước # <span id="badgeStep">0</span></span>
+            <span class="badge">p hiện tại = <span id="badgeP" style="color: var(--sky-600); font-size:15px; font-weight:bold;">?</span></span>
+            <span class="badge">Đang gạch bội số = <span id="badgeM" style="color: var(--rose); font-size:15px; font-weight:bold;">?</span></span>
+            <span class="badge">Trạng thái = <span id="badgeState" style="font-size:14px;">chưa bắt đầu</span></span>
+          </div>
+
+          <div id="gridNums" class="gridNums"></div>
+
+          <div id="explain" class="explain"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Mã giả Sàng Eratosthenes</div>
+        <div class="card-b">
+          <ol id="code" class="code"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© <span id="y"></span> — Mô phỏng giáo dục, bản offline. Giao diện Light Mode.</footer>
+</div>
+
+<script>
+/*
+  =====================================================
+  Sieve of Eratosthenes Simulator
+  Author: GPT-5 Thinking (Updated for Light Mode)
+  Date: 2025-10-27
+*/
+
+const state = {
+  N: null,             
+  numbers: [],         
+  pIndex: null,        
+  multIdx: null,       
+  step: 0,             
+  finished: false,
+  phase: "idle",       
+
+  autoPlay: false,
+  speed: 1.6,
+  timer: null,
+
+  logLines: [],
+  explain: "Nhập N, sau đó Bắt đầu / Bước tiếp.",
+  line: null           
+};
+
+/* ===== Helpers ===== */
+const $ = (id)=>document.getElementById(id);
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+
+function pushLog(msg){
+  state.logLines.push(msg);
+}
+
+function exportLog(){
+  const blob = new Blob([state.logLines.join("\n")], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const now = new Date();
+  const stamp = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2);
+
+  a.href = url;
+  a.download = "log_sieve_" + stamp + ".txt";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+/* ===== Core Step Logic ===== */
+function sieveOneStep(){
+  if(state.finished){
+    state.explain = "Sàng đã hoàn tất. Tất cả ô màu xanh lục là số nguyên tố.";
+    state.line = 5; 
+    pushLog(state.explain);
+    return false;
+  }
+
+  if(state.N===null || state.numbers.length===0){
+    state.explain = "⚠️ Chưa có dãy. Hãy nhập N và bấm 'Dùng N này'.";
+    state.line = null;
+    return false;
+  }
+
+  if(state.phase==="idle"){
+    state.phase = "selectP";
+    state.pIndex = null;
+    state.multIdx = null;
+    state.step = 0;
+    pushLog("Bắt đầu sàng. Chuẩn bị chọn p đầu tiên.");
+    state.explain = "Bắt đầu sàng. Chuẩn bị chọn p đầu tiên.";
+    state.line = 1; 
+    return true;
+  }
+
+  if(state.phase==="selectP"){
+    const nextPIndex = findNextPIndex();
+    if(nextPIndex===null){
+      finishSieve();
+      return false;
+    }
+    clearCurrentMarks();
+    state.pIndex = nextPIndex;
+    const pVal = state.numbers[state.pIndex].value;
+    state.numbers[state.pIndex].status = "current";
+    state.multIdx = pVal * 2;
+    state.phase = "markMultiples";
+
+    state.step++;
+    state.explain = `Chọn p = ${pVal} (chưa bị gạch).\nBắt đầu gạch các bội số của p: ${pVal}×2, ${pVal}×3, ...`;
+    state.line = 2; 
+    pushLog(state.explain);
+    return true;
+  }
+
+  if(state.phase==="markMultiples"){
+    const pVal = state.numbers[state.pIndex].value;
+    let m = state.multIdx;
+    
+    while(m <= state.N && isAlreadyCrossedOrIsP(m,pVal)){
+      m += pVal;
+    }
+    
+    if(m > state.N){
+      markPrime(pVal);
+      state.phase = "selectP";
+      state.multIdx = null;
+      state.step++;
+      state.explain = `Hoàn tất gạch bội số của p = ${pVal}.\nĐánh dấu ${pVal} là NGUYÊN TỐ (xanh lục).`;
+      state.line = 3; 
+      pushLog(state.explain);
+      return true;
+    }
+
+    crossNumber(m,pVal);
+    state.multIdx = m + pVal;
+    state.step++;
+
+    state.explain = `Loại bỏ bội số m = ${m} của p = ${pVal} (không phải nguyên tố).`;
+    state.line = 3;
+    pushLog(state.explain);
+    return true;
+  }
+
+  return false;
+}
+
+/* ===== Các thao tác đánh dấu ===== */
+function findNextPIndex(){
+  let startVal = 2;
+  if(state.pIndex!==null){
+    startVal = state.numbers[state.pIndex].value + 1;
+  }
+
+  for(let v=startVal; v* v <= state.N; v++){
+    const idx = indexOfValue(v);
+    if(idx!==null){
+      const st = state.numbers[idx].status;
+      if(st!=="crossed"){ 
+        return idx;
+      }
+    }
+  }
+  return null;
+}
+
+function indexOfValue(val){
+  for(let i=0;i<state.numbers.length;i++){
+    if(state.numbers[i].value===val){
+      return i;
+    }
+  }
+  return null;
+}
+
+function isAlreadyCrossedOrIsP(m,pVal){
+  const idx = indexOfValue(m);
+  if(idx===null) return true;
+  if(m===pVal) return true;
+  const st = state.numbers[idx].status;
+  return (st==="crossed" || st==="prime");
+}
+
+function clearCurrentMarks(){
+  for(const cell of state.numbers){
+    if(cell.status==="current") cell.status="unknown";
+    if(cell.status==="crossNow") cell.status="crossed";
+  }
+}
+
+function crossNumber(m,pVal){
+  const idx = indexOfValue(m);
+  if(idx===null) return;
+  if(state.numbers[idx].status==="crossed" || state.numbers[idx].status==="prime"){
+    return;
+  }
+  if(state.numbers[idx].status==="current"){
+    return;
+  }
+  
+  state.numbers[idx].status="crossNow";
+
+  const pIdx = indexOfValue(pVal);
+  if(pIdx!==null && state.numbers[pIdx].status!=="prime"){
+    state.numbers[pIdx].status="current";
+  }
+}
+
+function markPrime(pVal){
+  const idx = indexOfValue(pVal);
+  if(idx===null) return;
+  state.numbers[idx].status="prime";
+
+  for(const cell of state.numbers){
+    if(cell.status==="crossNow") cell.status="crossed";
+    if(cell.status==="current") {
+      if(cell.value===pVal){
+        cell.status="prime";
+      }else{
+        cell.status="unknown";
+      }
+    }
+  }
+}
+
+function finishSieve(){
+  state.finished = true;
+  state.phase = "done";
+  state.pIndex = null;
+  state.multIdx = null;
+
+  for(const cell of state.numbers){
+    if(cell.status==="unknown" || cell.status==="current"){
+      if(cell.value>=2){
+        cell.status="prime";
+      }
+    }
+    if(cell.status==="crossNow"){
+      cell.status="crossed";
+    }
+  }
+
+  state.step++;
+  const primes = collectPrimes();
+  state.explain = "Hoàn tất sàng.\nCác số nguyên tố là: " + primes.join(", ");
+  state.line = 4; 
+  pushLog("=== Hoàn tất sàng ===");
+  pushLog("Prime ≤ " + state.N + ": " + primes.join(", "));
+  updateExpectedBadge();
+}
+
+/* ===== Collect primes for quiz/result badge ===== */
+function collectPrimes(){
+  return state.numbers.filter(c=>c.value>=2 && c.status==="prime").map(c=>c.value);
+}
+
+/* ===== AUTO LOOP ===== */
+function autoLoop(){
+  if(!state.autoPlay) return;
+  const cont = sieveOneStep();
+  renderAll();
+  if(cont){
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*700));
+  }else{
+    state.autoPlay=false;
+  }
+}
+
+/* ===== INIT / RESET ===== */
+function initFromInput(){
+  const vN = parseInt($("inputN").value,10);
+  if(!Number.isFinite(vN) || vN < 2){
+    state.explain = "❌ N phải là số nguyên ≥ 2.";
+    state.line = null;
+    renderAll();
+    return;
+  }
+
+  buildNumbers(vN);
+
+  state.phase = "idle";
+  state.step = 0;
+  state.finished = false;
+  state.pIndex = null;
+  state.multIdx = null;
+  state.logLines = [];
+  state.explain = `Đã tạo dãy từ 2 đến ${state.N}. Sẵn sàng sàng.`;
+  state.line = null;
+  pushLog(`Khởi tạo dãy 2..${state.N}`);
+  updateExpectedBadge();
+  $("quiz").value = "";
+  $("quizResult").style.display="none";
+  renderAll();
+}
+
+function buildNumbers(N){
+  state.N = N;
+  state.numbers = [];
+  for(let val=2; val<=N; val++){
+    state.numbers.push({
+      value: val,
+      status: "unknown" 
+    });
+  }
+}
+
+function resetAll(){
+  state.autoPlay = false;
+  clearTimeout(state.timer);
+
+  state.N = null;
+  state.numbers = [];
+  state.pIndex = null;
+  state.multIdx = null;
+  state.step = 0;
+  state.finished = false;
+  state.phase = "idle";
+  state.logLines = [];
+  state.explain = "Đã làm mới. Nhập N rồi 'Dùng N này', sau đó Bắt đầu/Step.";
+  state.line = null;
+  $("quiz").value = "";
+  $("quizResult").style.display="none";
+  updateExpectedBadge();
+  renderAll();
+}
+
+/* ===== QUIZ ===== */
+function updateExpectedBadge(){
+  if(state.finished){
+    const primes = collectPrimes();
+    $("expected").style.display = "inline-block";
+    $("expected").textContent = "Gợi ý: " + primes.length + " số";
+  }else{
+    $("expected").style.display = "none";
+  }
+}
+
+function checkQuiz(){
+  const resEl = $("quizResult");
+  const guess = parseInt($("quiz").value,10);
+  
+  if(state.N===null){
+    resEl.style.color = "inherit";
+    resEl.innerHTML="⚠️ Hãy nhập N và bắt đầu sàng trước.";
+    return;
+  }
+  if(!Number.isFinite(guess)){
+    resEl.style.color = "inherit";
+    resEl.innerHTML="⚠️ Hãy nhập một số nguyên (dự đoán số lượng số nguyên tố).";
+    return;
+  }
+  if(!state.finished){
+    resEl.style.color = "inherit";
+    resEl.innerHTML="⏳ Sàng chưa xong nên chưa thể chấm chính xác. Hãy Step/AUTO đến khi hoàn tất.";
+    return;
+  }
+  
+  const primes = collectPrimes();
+  const correct = primes.length;
+  if(guess===correct){
+    resEl.style.color = "var(--green-700)";
+    resEl.innerHTML="🎉 <strong>Chuẩn luôn!</strong> Bạn đếm đúng số lượng số nguyên tố ≤ N.";
+  } else {
+    resEl.style.color = "var(--rose)";
+    resEl.innerHTML=`❌ <strong>Chưa chính xác.</strong> Thực tế có ${correct} số nguyên tố ≤ ${state.N}.`;
+  }
+}
+
+/* ===== RENDER CODE ===== */
+const codeLines = [
+  "Tạo mảng đánh dấu 2..N là \"chưa gạch\"",
+  "p ← 2",
+  "while p*p ≤ N:",
+  "    nếu p chưa bị gạch:",
+  "        gạch tất cả bội số của p (p*2, p*3, ...)",
+  "    p ← p+1",
+  "Các số không bị gạch là số nguyên tố"
+];
+
+function renderCode(){
+  const list = $("code");
+  list.innerHTML = "";
+  codeLines.forEach((ln,idx)=>{
+    const li=document.createElement("li");
+    li.textContent=(idx+1)+". "+ln;
+    if(state.phase==="idle" && (idx===0||idx===1)) li.classList.add("active");
+    if(state.phase==="selectP" && (idx===1||idx===2||idx===3)) li.classList.add("active");
+    if(state.phase==="markMultiples" && (idx===3||idx===4||idx===5)) li.classList.add("active");
+    if(state.phase==="done" && (idx===6)) li.classList.add("active");
+    if(state.line===idx) {
+      li.classList.add("active");
+    }
+    list.appendChild(li);
+  });
+}
+
+/* ===== RENDER GRID ===== */
+function renderGrid(){
+  const grid = $("gridNums");
+  grid.innerHTML = "";
+
+  for(const cell of state.numbers){
+    let cls = "numCell ";
+    if(cell.status==="prime") cls += "primeNow ";
+    else if(cell.status==="current") cls += "currentP ";
+    else if(cell.status==="crossNow") cls += "crossNow ";
+    else if(cell.status==="crossed") cls += "crossed ";
+
+    const d = document.createElement("div");
+    d.className = cls.trim();
+    d.textContent = cell.value;
+    grid.appendChild(d);
+  }
+}
+
+/* ===== RENDER BADGES / HEADER RIGHT ===== */
+function renderBadges(){
+  $("badgeStep").textContent = state.step;
+  let pVal = "?";
+  if(state.pIndex!==null && state.pIndex>=0 && state.pIndex<state.numbers.length){
+    pVal = state.numbers[state.pIndex].value;
+  }
+  $("badgeP").textContent = pVal;
+
+  $("badgeM").textContent = (state.multIdx!=null ? state.multIdx : "?");
+
+  let stText = "đang sàng...";
+  if(state.phase==="idle") stText="chưa bắt đầu";
+  if(state.phase==="selectP") stText="chọn p mới";
+  if(state.phase==="markMultiples") stText="gạch bội số";
+  if(state.phase==="done") stText="hoàn tất";
+  $("badgeState").textContent = stText;
+
+  $("speed").value = state.speed;
+  $("speedLabel").textContent = state.speed.toFixed(1)+"s";
+
+  $("explain").innerHTML = state.explain ? state.explain.replace(/\n/g, '<br/>') : "";
+}
+
+/* ===== RENDER ALL ===== */
+function renderAll(){
+  renderBadges();
+  renderGrid();
+  renderCode();
+  $("y").textContent = new Date().getFullYear();
+}
+
+/* ===== EVENT WIRING ===== */
+function wire(){
+  $("btnRandomN").addEventListener("click", ()=>{
+    const n = randInt(20,120);
+    $("inputN").value = n;
+  });
+
+  $("btnUseN").addEventListener("click", ()=>{
+    initFromInput();
+  });
+
+  $("speed").addEventListener("input", e=>{
+    state.speed = Number(e.target.value);
+    renderAll();
+  });
+
+  $("btnRun").addEventListener("click", ()=>{
+    if(state.N===null){
+      initFromInput();
+    }
+    sieveOneStep();
+    renderAll();
+  });
+
+  $("btnStep").addEventListener("click", ()=>{
+    state.autoPlay = false;
+    clearTimeout(state.timer);
+    if(state.N===null){
+      initFromInput();
+    }
+    sieveOneStep();
+    renderAll();
+  });
+
+  $("btnAuto").addEventListener("click", ()=>{
+    state.autoPlay = true;
+    clearTimeout(state.timer);
+    if(state.N===null){
+      initFromInput();
+    }
+    sieveOneStep(); 
+    renderAll();
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*400));
+  });
+
+  $("btnReset").addEventListener("click", ()=>{
+    state.autoPlay=false;
+    clearTimeout(state.timer);
+    resetAll();
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    exportLog();
+  });
+
+  $("btnQuiz").addEventListener("click", ()=>{
+    $("quizResult").style.display="block";
+    checkQuiz();
+  });
+}
+
+/* ===== INIT ===== */
+(function init(){
+  $("inputN").value = 50;
+  state.speed = 1.6;
+  resetAll();
+  wire();
+  renderAll();
+})();
+</script>
+</body>
+</html>

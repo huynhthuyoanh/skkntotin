@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Array Sum Advanced Simulator — Tổng & Trung bình & Prefix</title>
+  <meta name="description" content="Mô phỏng tính tổng dãy số, trung bình cuối cùng và biểu đồ prefix sum từng bước. Có Step/Auto/Quiz/Export. Offline, light UI."/>
+  <style>
+    :root {
+      /* Bảng màu Giao diện Sáng (Light Mode) */
+      --bg1: #f0f4f8; 
+      --bg2: #e2e8f0;
+      --card: rgba(255, 255, 255, 0.95);
+      --panel: #f8fafc;
+      --text: #0f172a; 
+      --muted: #475569; 
+      --border: #cbd5e1;
+      --shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+
+      --green-600: #059669; --green-700: #047857;
+      --sky-600: #0284c7;
+      --amber: #d97706;
+      --rose: #e11d48;
+
+      --current-bg: #e0f2fe;   /* phần tử đang cộng */
+      --current-border: #7dd3fc;
+      --current-fg: #0369a1;
+
+      --done-bg: #f1f5f9;       /* phần tử đã cộng xong */
+      --done-border: #cbd5e1;
+      --done-fg: #94a3b8;
+
+      --final-bg: #dcfce7;      /* tổng cuối */
+      --final-border: #86efac;
+      --final-fg: #166534;
+
+      /* Biểu đồ prefix sum */
+      --bar-current-bg: rgba(56, 189, 248, 0.3);
+      --bar-current-border: #38bdf8;
+      --bar-current-fg: #0c4a6e;
+      
+      --bar-done-bg: rgba(52, 211, 153, 0.3);
+      --bar-done-border: #34d399;
+      --bar-done-fg: #064e3b;
+    }
+
+    html,body{
+      margin:0;padding:0;
+      background:linear-gradient(135deg,var(--bg1),var(--bg2));
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+      min-height: 100vh;
+    }
+
+    .home-btn {
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      display: inline-grid; place-items: center;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #ffffff; color: var(--text);
+      border: 1px solid var(--border); text-decoration: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .home-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      border-color: var(--sky-600);
+      color: var(--sky-600);
+    }
+    .home-btn svg {
+      width: 22px; height: 22px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .container{max-width:1280px;margin:0 auto;padding:24px;}
+    .header{text-align:center;margin-bottom:24px}
+
+    .chip{
+      display:inline-flex;align-items:center;gap:10px;
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:10px 16px;box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .title{font-weight:900;font-size:26px;letter-spacing:.3px}
+    .subtitle{color:var(--muted);margin-top:10px;font-size:14.5px;line-height:1.5;font-weight:500;}
+
+    .layout{
+      display:grid; grid-template-columns:1fr; gap:16px;
+    }
+    @media(min-width:1100px){
+      .layout{ grid-template-columns:4fr 8fr; }
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card-h{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:14px 18px;border-bottom:1px solid var(--border);font-weight:800;font-size:16px;
+    }
+    .card-b{padding:18px;}
+    
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+    
+    .badge{
+      display:inline-block;border:1px solid var(--border);
+      padding:4px 10px;border-radius:8px;font-weight:600;
+      font-size:13px;background:#f1f5f9;color:var(--muted);
+      box-shadow:0 1px 2px rgba(0,0,0,0.02);
+    }
+    .text-muted{color:var(--muted);font-size:13.5px;line-height:1.5;font-weight:500;}
+
+    .btn{
+      border:1px solid var(--border);border-radius:10px;
+      padding:10px 14px;font-size:14px;background:#ffffff;color:#334155;
+      cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.05);font-weight:700;
+      transition:all 0.2s ease;
+    }
+    .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none !important;}
+    .btn.green{background:var(--green-600);color:#fff;border-color:transparent;}
+    .btn.green:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(5,150,105,0.3);}
+    .btn.blue{background:var(--sky-600);color:#fff;border-color:transparent;}
+    .btn.blue:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(2,132,199,0.3);}
+    .btn.amber{background:var(--amber);color:#fff;border-color:transparent;}
+    .btn.amber:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(217,119,6,0.3);}
+    .btn.rose{background:var(--rose);color:#fff;border-color:transparent;}
+    .btn.rose:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 10px rgba(225,29,72,0.3);}
+    .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .btn.ghost:hover{background:#f1f5f9;border-color:#94a3b8;color:var(--text);}
+
+    .slider{width:100%;accent-color:var(--sky-600);cursor:pointer;}
+    .input{
+      border:1px solid var(--border);border-radius:10px;
+      padding:9px 12px;background:#ffffff;color:var(--text);
+      font-family:ui-monospace,Consolas,monospace;font-size:14px;
+      box-shadow:inset 0 1px 3px rgba(0,0,0,0.03);transition:border-color 0.2s;outline:none;
+    }
+    .input:focus{border-color:var(--sky-600);box-shadow:0 0 0 3px rgba(2,132,199,0.1);}
+    .input.short{width:100px;text-align:center;font-weight:700;font-size:15px;}
+    .input.long{min-width:220px;flex:1 1 auto;}
+
+    /* Lưới hiển thị mảng */
+    .arrGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(70px,1fr));
+      gap:12px;
+      width:100%;
+    }
+    .arrCell{
+      position:relative;
+      border-radius:14px;
+      border:1px solid var(--border);
+      box-shadow:0 2px 6px rgba(0,0,0,0.03);
+      min-height:64px;
+      font-size:18px;
+      font-weight:800;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#ffffff;
+      color:var(--text);
+      transition:.18s;
+      text-align:center;
+      line-height:1.2;
+      padding:6px;
+      word-break:break-word;
+    }
+    .arrCell.done{
+      background:var(--done-bg);
+      border-color:var(--done-border);
+      color:var(--done-fg);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .arrCell.current{
+      background:var(--current-bg);
+      border-color:var(--current-border);
+      color:var(--current-fg);
+      box-shadow:0 0 0 4px rgba(56,189,248,0.25);
+      z-index:2;
+    }
+    .arrCell.finalSum{
+      background:var(--final-bg);
+      border-color:var(--final-border);
+      color:var(--final-fg);
+      box-shadow:0 0 0 4px rgba(34,197,94,0.2);
+      z-index:2;
+    }
+    .idx{
+      position:absolute;
+      right:-8px;top:-8px;
+      background:#ffffff;
+      color:var(--muted);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:2px 8px;
+      font-size:11px;
+      font-weight:800;
+      box-shadow:0 2px 4px rgba(0,0,0,0.08);
+      z-index:3;
+    }
+
+    /* PREFIX SUM CHART AREA */
+    .chartWrap{
+      margin-top:16px;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .chartHeader{
+      font-size:14px;
+      font-weight:700;
+      color:var(--text);
+      margin-bottom:12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items: center;
+    }
+    .chartArea{
+      display:flex;
+      align-items:flex-end;
+      gap:8px;
+      min-height:140px;
+      overflow-x:auto;
+      padding-bottom:8px;
+    }
+    .barCol{
+      flex:0 0 36px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      font-size:12px;
+      line-height:1.2;
+      color:var(--text);
+    }
+    .barBox{
+      width:100%;
+      border-radius:6px 6px 2px 2px;
+      border:1px solid var(--bar-done-border);
+      background:var(--bar-done-bg);
+      transition:height .15s, background .2s, border .2s;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      font-size:11px;
+      font-weight:800;
+      padding-bottom:4px;
+      color:var(--bar-done-fg);
+      box-sizing:border-box;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+    .barBox.currentBar{
+      border-color:var(--bar-current-border);
+      background:var(--bar-current-bg);
+      color:var(--bar-current-fg);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.2);
+    }
+    .barIdxLabel{
+      margin-top:6px;
+      font-weight:800;
+      background:#ffffff;
+      border-radius:6px;
+      padding:2px 6px;
+      border:1px solid var(--border);
+      min-width:26px;
+      text-align:center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+
+    .explain{
+      background:var(--panel);
+      border-radius:14px;
+      padding:14px;
+      border:1px solid var(--border);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+      margin-top:16px;
+      color:var(--text);
+      font-size:16px; 
+      line-height:1.6;
+      white-space:pre-line;
+      font-weight:600;
+    }
+
+    ol.code{
+      background:var(--panel);
+      border-radius:14px;
+      padding:16px 16px 16px 36px;
+      list-style-type:decimal;
+      margin:0;
+      border:1px solid var(--border);
+      box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    ol.code li{
+      padding:8px 10px;
+      border-radius:8px;
+      font-family:ui-monospace,Consolas,monospace;
+      font-size:13.5px;
+      line-height:1.4;
+      font-weight:500;
+      color:#334155;
+      transition:background 0.3s;
+      margin-bottom:4px;
+    }
+    ol.code li.active{
+      background:#fef08a; /* Vàng nhạt */
+      box-shadow:0 0 0 2px #facc15 inset;
+      color:#854d0e;
+      font-weight:700;
+    }
+
+    footer{
+      margin-top:24px;
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+      font-weight:500;
+    }
+  </style>
+</head>
+<body>
+<a href="HOMEPAGE.HTML" class="home-btn" aria-label="Về trang chủ" title="Về trang chủ">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 10l9-7 9 7"/>
+    <path d="M5 10v10a2 2 0 0 0 2 2h3v-6h4v6h3a2 2 0 0 0 2-2V10"/>
+  </svg>
+</a>
+
+<div class="container">
+  <header class="header">
+    <div class="chip">
+      <span style="font-size: 22px;">📊</span>
+      <div class="title">
+        Array Sum Advanced Simulator —
+        <span style="color: var(--sky-600)">Tổng • Trung bình • Prefix Sum</span>
+      </div>
+    </div>
+    <div class="subtitle">
+      Duyệt tuyến tính: Sum = Sum + A[i]. Mô phỏng tính tổng dãy số, trung bình cuối cùng và biểu đồ prefix sum từng bước.<br/>
+      Giao diện Light Mode, chạy 100% offline trong trình duyệt.
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="left-col">
+      <div class="card">
+        <div class="card-h">Thiết lập dãy & điều khiển</div>
+        <div class="card-b">
+
+          <div class="row">
+            <span class="badge" style="width: 120px; text-align: center;">Số phần tử (n)</span>
+            <input id="n" type="range" min="3" max="15" step="1" class="slider" style="flex:1;"/>
+            <span id="nLabel" class="badge" style="width: 40px; text-align: center;">8</span>
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <button class="btn ghost" id="btnMakeDistinct" style="flex:1;" title="Tạo mảng giá trị ngẫu nhiên không trùng">Ngẫu nhiên (không trùng)</button>
+            <button class="btn ghost" id="btnMakeMaybeDup" style="flex:1;" title="Tạo mảng ngẫu nhiên có thể lặp giá trị">Ngẫu nhiên (có lặp)</button>
+          </div>
+
+          <div class="row" style="margin-top:12px; width:100%">
+            <span class="badge" style="width: 120px; text-align: center;">Hoặc nhập thủ công</span>
+            <input id="manualArr" class="input long" placeholder="VD: 5, -2, 10, 7, 0"/>
+            <button class="btn ghost" id="btnUseManual">Dùng</button>
+          </div>
+          
+          <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+          <div class="row">
+            <span class="badge" style="width: 120px; text-align: center;">Tốc độ Auto</span>
+            <input id="speed" type="range" min="0.5" max="4.0" step="0.1" class="slider" style="flex:1;"/>
+            <span id="speedLabel" class="badge" style="width: 80px; text-align: center;">1.6s/bước</span>
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn green" id="btnRun" style="flex:1;">Bắt đầu</button>
+            <button class="btn blue" id="btnStep" style="flex:1;">Bước tiếp ▷</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn amber" id="btnAuto" style="flex:1;">Chạy Tự động ▷</button>
+            <button class="btn rose" id="btnReset" style="flex:1;">Làm mới</button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Ghi chú / Xuất kết quả</div>
+        <div class="card-b">
+          <div class="text-muted">
+            - Sum: tổng các phần tử đã xử lý.<br/>
+            - Trung bình chỉ hiển thị khi đã xử lý xong toàn bộ mảng.<br/>
+            - Prefix sum dùng cho biểu đồ thanh: mỗi cột = tổng từ A[0] tới A[i].<br/>
+            - Quiz: đoán Tổng và Trung bình cuối cùng trước khi chạy xong.
+          </div>
+
+          <div class="row" style="margin-top:16px">
+            <button class="btn ghost" id="btnExport">Xuất log .txt</button>
+          </div>
+
+          <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+
+          <div id="quizArea">
+            <div class="text-muted" style="font-weight: 700;">
+              Dự đoán nhanh:
+            </div>
+            <div class="row" style="margin-top:10px">
+              <input id="quizSum" type="number" class="input short" placeholder="Tổng = ?"/>
+              <input id="quizAvg" type="number" step="any" class="input short" placeholder="TB = ?"/>
+              <button class="btn ghost" id="btnQuiz">Kiểm tra</button>
+            </div>
+
+            <div class="row" style="margin-top:10px">
+              <span class="badge" id="expectedSum"></span>
+              <span class="badge" id="expectedAvg"></span>
+            </div>
+
+            <div id="quizResult" class="explain" style="display:none;margin-top:12px; font-size: 15px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <div class="card">
+        <div class="card-h">Mô phỏng tính tổng / biểu đồ prefix</div>
+        <div class="card-b">
+
+          <div class="row" style="margin-bottom:12px">
+            <span class="badge">i = <span id="badgeI" style="font-weight: 800; color: var(--text);">0</span></span>
+            <span class="badge">A[i] = <span id="badgeVal" style="font-weight: 800; color: var(--sky-600);">?</span></span>
+            <span class="badge">Sum = <span id="badgeSum" style="font-weight: 800; color: var(--green-600);">0</span></span>
+            <span class="badge">avg = <span id="badgeAvg" style="font-weight: 800; color: var(--text);">?</span></span>
+            <span class="badge">đã cộng = <span id="badgeDone" style="color: var(--amber);">0</span> / <span id="badgeNTotal">0</span></span>
+            <span class="badge" id="badgeState" style="margin-left: auto; border-color: var(--sky-600); color: var(--sky-600);">chưa bắt đầu</span>
+          </div>
+
+          <div id="arrGrid" class="arrGrid"></div>
+
+          <div class="chartWrap">
+            <div class="chartHeader">
+              <span style="color: var(--sky-600);">Biểu đồ prefixSum[i] = A[0] + ... + A[i]</span>
+              <span style="font-size:12.5px;color:var(--muted);font-weight:500; margin-left: auto;">
+                Cột đang cập nhật: <b style="color:var(--sky-600);">Xanh lam</b> • Đã chốt: <b style="color:var(--green-600);">Xanh lục</b>
+              </span>
+            </div>
+            <div id="chartArea" class="chartArea"></div>
+          </div>
+
+          <div id="explain" class="explain"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-h">Mã giả thuật toán</div>
+        <div class="card-b">
+          <ol id="code" class="code"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© <span id="y"></span> — Mô phỏng giáo dục, bản offline. Giao diện Light Mode.</footer>
+</div>
+
+<script>
+/*
+  =====================================================
+  Array Sum Advanced Simulator (Light Mode)
+  Author: GPT-5 Thinking
+  Date: 2025-10-27
+*/
+
+const state = {
+  n: 8,
+  arr: [],          
+  prefix: [],       
+  i: 0,
+  sum: 0,
+  avg: null,
+  doneCount: 0,
+  finished: false,
+
+  speed: 1.6,
+  autoPlay: false,
+  timer: null,
+
+  explain: "Tạo mảng rồi bấm Bắt đầu hoặc Bước tiếp.",
+  line: null,
+  logLines: []
+};
+
+/* ===== Helpers ===== */
+const $ = (id)=>document.getElementById(id);
+function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+function fmtAvg(a){
+  if(a==null) return "?";
+  return Number.isFinite(a) ? a.toFixed(3).replace(/\.?0+$/,"") : "?";
+}
+
+function createArray(n, distinct){
+  const used = new Set();
+  const out = [];
+  for(let k=0;k<n;k++){
+    let v = randInt(-9,30); 
+    if(distinct){
+      while(used.has(v)) v = randInt(-9,30);
+      used.add(v);
+    }
+    out.push({value:v, status:"idle"});
+  }
+  return out;
+}
+
+/* ===== Simulation Step ===== */
+function sumOneStep(){
+  if(state.finished){
+    state.explain =
+      `Hoàn tất.\n`+
+      `Tổng = ${state.sum}.\n`+
+      `Trung bình = ${fmtAvg(state.avg)}.`;
+    state.line = 5;
+    pushLog(state.explain);
+    return false;
+  }
+
+  if(state.arr.length===0){
+    state.explain = "Mảng rỗng. Tạo mảng trước.";
+    state.line = null;
+    return false;
+  }
+
+  if(state.doneCount===0 && state.i===0 && !anyCellCurrent()){
+    markCurrent(state.i);
+    state.explain =
+      `Bắt đầu: Sum = 0.\n`+
+      `Xét A[0] = ${state.arr[0].value}.`;
+    state.line = 0; 
+    pushLog(state.explain);
+    return true;
+  }
+
+  if(state.i >= state.arr.length){
+    finishSummation();
+    return false;
+  }
+
+  const val = state.arr[state.i].value;
+  state.sum = state.sum + val;
+  state.prefix[state.i] = state.sum;
+  state.avg = state.sum / (state.i+1); 
+
+  state.arr[state.i].status = "done";
+  state.doneCount++;
+
+  const showVal = (val < 0) ? `(${val})` : `${val}`;
+  state.explain =
+    `A[${state.i}] = ${val}; `+
+    `Sum = Sum + ${showVal}; \n`+
+    `Sum mới = ${state.sum};`;
+
+  state.line = 2;
+  pushLog(state.explain);
+
+  state.i++;
+
+  if(state.i >= state.arr.length){
+    finishSummation();
+    return false;
+  } else {
+    markCurrent(state.i);
+    return true;
+  }
+}
+
+/* ===== Marking helpers ===== */
+function markCurrent(idx){
+  clearCurrent();
+  if(idx < state.arr.length){
+    if(state.arr[idx].status==="idle"){
+      state.arr[idx].status="current";
+    }
+  }
+}
+function clearCurrent(){
+  for(const cell of state.arr){
+    if(cell.status==="current"){
+      cell.status="idle";
+    }
+  }
+}
+function anyCellCurrent(){
+  return state.arr.some(c=>c.status==="current");
+}
+
+/* ===== Finish ===== */
+function finishSummation(){
+  state.finished = true;
+  clearCurrent();
+
+  for(const cell of state.arr){
+    if(cell.status==="idle"||cell.status==="current"){
+      cell.status="done";
+    }
+  }
+
+  state.avg = state.sum / state.arr.length;
+
+  state.explain =
+    `Hoàn tất thuật toán.\n`+
+    `Tổng cuối cùng = ${state.sum}.\n`+
+    `Trung bình cộng = ${fmtAvg(state.avg)}.`;
+  state.line = 5;
+  pushLog(state.explain);
+}
+
+/* ===== AUTO LOOP ===== */
+function autoLoop(){
+  if(!state.autoPlay) return;
+  const cont = sumOneStep();
+  renderAll();
+  if(cont){
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*700));
+  } else {
+    state.autoPlay=false;
+  }
+}
+
+/* ===== Init / Reset ===== */
+function resetSimulationKeepArray(){
+  for(const cell of state.arr){
+    cell.status="idle";
+  }
+  state.prefix = new Array(state.arr.length).fill(null);
+
+  state.i=0;
+  state.sum=0;
+  state.avg=null;
+  state.doneCount=0;
+  state.finished=false;
+
+  state.autoPlay=false;
+  clearTimeout(state.timer);
+  state.timer=null;
+
+  state.explain = "Đã làm mới tiến trình. Sum = 0, sẵn sàng chạy lại.";
+  state.line = null;
+  state.logLines=[];
+  $("quizResult").style.display="none";
+  pushLog("Reset tiến trình.");
+}
+
+function fullInitArrayRandom(distinct){
+  state.arr = createArray(state.n, distinct);
+  resetSimulationKeepArray();
+}
+
+function useManualArray(){
+  const raw = $("manualArr").value.trim();
+  if(!raw){
+    state.explain="❌ Chuỗi trống. Ví dụ: 5, -2, 10, 7, 0";
+    renderAll();
+    return;
+  }
+  const parts = raw.split(/[\s,;]+/).filter(s=>s.length>0);
+  const nums = parts.map(x=>parseFloat(x)).filter(v=>Number.isFinite(v));
+  if(nums.length === 0){
+    state.explain="❌ Dãy số không hợp lệ.";
+    renderAll();
+    return;
+  }
+  state.arr = nums.map(v=>({value:v,status:"idle"}));
+  state.n = state.arr.length;
+  resetSimulationKeepArray();
+}
+
+function pushLog(msg){
+  state.logLines.push(msg);
+}
+
+function exportLog(){
+  const blob = new Blob([state.logLines.join("\n")], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const now = new Date();
+  const stamp = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2) + ("0"+now.getSeconds()).slice(-2);
+
+  a.href = url;
+  a.download = "log_array_sum_advanced_" + stamp + ".txt";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+/* ===== Quiz ===== */
+function updateExpectedBadges(){
+  if(state.finished){
+    $("expectedSum").textContent = "Kết quả: Tổng = " + state.sum;
+    $("expectedAvg").textContent = "Trung bình = " + fmtAvg(state.avg);
+    $("expectedSum").style.display = "inline-block";
+    $("expectedAvg").style.display = "inline-block";
+  }else{
+    $("expectedSum").style.display = "none";
+    $("expectedAvg").style.display = "none";
+  }
+}
+
+function checkQuiz(){
+  const resEl = $("quizResult");
+  const guessSum = parseFloat($("quizSum").value);
+  const guessAvg = parseFloat($("quizAvg").value);
+
+  if(state.arr.length===0){
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.textContent="⚠️ Hãy tạo mảng trước.";
+    return;
+  }
+  if(!state.finished){
+    resEl.style.display="block";
+    resEl.style.color="inherit";
+    resEl.textContent="⏳ Thuật toán chưa hoàn tất. Hãy Step/AUTO đến hết để đối chiếu chính xác.";
+    return;
+  }
+
+  let msg = "";
+  let allCorrect = true;
+
+  if(Number.isFinite(guessSum)){
+    if(guessSum===state.sum){
+      msg += "✅ Tổng: Chính xác!\n";
+    } else {
+      msg += `❌ Tổng: Chưa đúng (Kết quả thật: ${state.sum})\n`;
+      allCorrect = false;
+    }
+  } else {
+    msg += "⚠️ Bạn chưa nhập Tổng hoặc không hợp lệ.\n";
+    allCorrect = false;
+  }
+
+  if(Number.isFinite(guessAvg)){
+    const realAvg = Number(state.avg.toFixed(6));
+    const guessAvgRounded = Number(guessAvg.toFixed(6));
+    if(realAvg===guessAvgRounded){
+      msg += "✅ Trung bình: Chính xác!";
+    } else {
+      msg += `❌ Trung bình: Chưa đúng (Kết quả thật: ${fmtAvg(state.avg)})`;
+      allCorrect = false;
+    }
+  } else {
+    msg += "⚠️ Bạn chưa nhập Trung bình hoặc không hợp lệ.";
+    allCorrect = false;
+  }
+
+  resEl.style.display="block";
+  resEl.style.color = allCorrect ? "var(--green-700)" : "var(--rose)";
+  resEl.innerHTML = msg.replace(/\n/g, "<br>");
+}
+
+/* ===== Render Code (mã giả) ===== */
+const codeLines = [
+  "Sum ← 0",
+  "i ← 0",
+  "while i < n:",
+  "    Sum ← Sum + A[i]",
+  "    prefixSum[i] ← Sum",
+  "    i ← i + 1",
+  "avg ← Sum / n",
+  "return Sum, avg"
+];
+
+function renderCode(){
+  const list = $("code");
+  list.innerHTML = "";
+  codeLines.forEach((ln,idx)=>{
+    const li=document.createElement("li");
+    li.textContent=(idx+1)+". "+ln;
+    if(state.line===idx) li.classList.add("active");
+    list.appendChild(li);
+  });
+}
+
+/* ===== Render Array Grid ===== */
+function renderGrid(){
+  const grid = $("arrGrid");
+  grid.innerHTML = "";
+
+  for(let idx=0; idx<state.arr.length; idx++){
+    const cell = state.arr[idx];
+    let cls = "arrCell ";
+    if(cell.status==="done") cls += "done ";
+    if(cell.status==="current") cls += "current ";
+    if(cell.status==="final") cls += "finalSum ";
+
+    const d = document.createElement("div");
+    d.className = cls.trim();
+    d.innerHTML = `<span class="idx">${idx}</span>${cell.value}`;
+    grid.appendChild(d);
+  }
+}
+
+/* ===== Render Chart (prefix sums) ===== */
+function renderChart(){
+  const area = $("chartArea");
+  area.innerHTML = "";
+
+  const validVals = state.prefix.filter(v=>Number.isFinite(v));
+  const maxVal = validVals.length ? Math.max(...validVals.map(Math.abs)) : 1;
+
+  for(let idx=0; idx<state.arr.length; idx++){
+    const psVal = state.prefix[idx];
+    const col = document.createElement("div");
+    col.className = "barCol";
+
+    const bar = document.createElement("div");
+    const heightPct = Number.isFinite(psVal) ? (Math.abs(psVal)/maxVal)*100 : 0;
+
+    let barCls = "barBox ";
+    if(state.doneCount-1 === idx && Number.isFinite(psVal) && !state.finished){
+      barCls += "currentBar ";
+    }
+
+    bar.className = barCls.trim();
+    bar.style.height = (heightPct*1.1 + 10) + "px";
+    bar.textContent = Number.isFinite(psVal) ? psVal : "";
+
+    const idxLabel = document.createElement("div");
+    idxLabel.className = "barIdxLabel";
+    idxLabel.textContent = idx;
+
+    col.appendChild(bar);
+    col.appendChild(idxLabel);
+    area.appendChild(col);
+  }
+}
+
+/* ===== Render Badges / Explain ===== */
+function renderBadges(){
+  $("badgeI").textContent = state.i;
+  $("badgeVal").textContent =
+    (state.i < state.arr.length && !state.finished)
+      ? state.arr[state.i].value
+      : "?";
+
+  $("badgeSum").textContent = state.sum;
+
+  $("badgeAvg").textContent = state.finished
+    ? fmtAvg(state.avg)
+    : "?";
+
+  $("badgeDone").textContent = state.doneCount;
+  $("badgeNTotal").textContent = state.arr.length;
+
+  let stText="đang tính";
+  if(state.arr.length===0) stText="chưa có mảng";
+  if(state.finished) stText="đã xong";
+  $("badgeState").textContent = stText;
+  $("badgeState").style.color = state.finished ? "var(--green-600)" : "var(--sky-600)";
+  $("badgeState").style.borderColor = state.finished ? "var(--green-600)" : "var(--sky-600)";
+
+  $("n").value = state.n;
+  $("nLabel").textContent = state.n;
+  $("speed").value = state.speed;
+  $("speedLabel").textContent = state.speed.toFixed(1)+"s/bước";
+
+  $("explain").innerHTML = state.explain ? state.explain.replace(/\n/g, '<br/>') : "";
+}
+
+/* ===== Render All ===== */
+function renderAll(){
+  renderBadges();
+  renderGrid();
+  renderChart();
+  renderCode();
+  updateExpectedBadges();
+  $("y").textContent = new Date().getFullYear();
+}
+
+/* ===== Wiring UI Events ===== */
+function wire(){
+  $("n").addEventListener("input", e=>{
+    state.n = Number(e.target.value);
+    fullInitArrayRandom(true);
+    renderAll();
+  });
+
+  $("btnMakeDistinct").addEventListener("click", ()=>{
+    fullInitArrayRandom(true);
+    renderAll();
+  });
+
+  $("btnMakeMaybeDup").addEventListener("click", ()=>{
+    fullInitArrayRandom(false);
+    renderAll();
+  });
+
+  $("btnUseManual").addEventListener("click", ()=>{
+    useManualArray();
+    renderAll();
+  });
+
+  $("speed").addEventListener("input", e=>{
+    state.speed = Number(e.target.value);
+    renderAll();
+  });
+
+  $("btnRun").addEventListener("click", ()=>{
+    if(state.arr.length===0){
+      fullInitArrayRandom(true);
+    }
+    const cont = sumOneStep();
+    renderAll();
+  });
+
+  $("btnStep").addEventListener("click", ()=>{
+    state.autoPlay=false;
+    clearTimeout(state.timer);
+    if(state.arr.length===0){
+      fullInitArrayRandom(true);
+    }
+    sumOneStep();
+    renderAll();
+  });
+
+  $("btnAuto").addEventListener("click", ()=>{
+    state.autoPlay=true;
+    clearTimeout(state.timer);
+    if(state.arr.length===0){
+      fullInitArrayRandom(true);
+    }
+    sumOneStep(); 
+    renderAll();
+    state.timer = setTimeout(autoLoop, Math.max(100, state.speed*400));
+  });
+
+  $("btnReset").addEventListener("click", ()=>{
+    resetSimulationKeepArray();
+    renderAll();
+  });
+
+  $("btnExport").addEventListener("click", ()=>{
+    exportLog();
+  });
+
+  $("btnQuiz").addEventListener("click", ()=>{
+    $("quizResult").style.display="block";
+    checkQuiz();
+  });
+}
+
+/* ===== Init ===== */
+(function init(){
+  state.speed = 1.6;
+  state.n = 8;
+  fullInitArrayRandom(true);
+  renderAll();
+  wire();
+})();
+</script>
+</body>
+</html>
